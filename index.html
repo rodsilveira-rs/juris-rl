@@ -447,7 +447,7 @@
 </div>
 
 <script>
-  // ===== Vinheta de abertura (toca 1x por sessão) =====
+ // ===== Vinheta de abertura (toca 1x por sessão) =====
   (function(){
     const overlay = document.getElementById('introVinheta');
     const video = document.getElementById('videoVinheta');
@@ -459,9 +459,25 @@
     }
     if (sessionStorage.getItem('vinhetaVista')) {
       overlay.remove();
-    } else {
-      video.addEventListener('ended', () => { sessionStorage.setItem('vinhetaVista','1'); esconderIntro(); });
-      pular.addEventListener('click', () => { sessionStorage.setItem('vinhetaVista','1'); esconderIntro(); });
+      return;
+    }
+    video.addEventListener('ended', () => { sessionStorage.setItem('vinhetaVista','1'); esconderIntro(); });
+    pular.addEventListener('click', () => { sessionStorage.setItem('vinhetaVista','1'); esconderIntro(); });
+
+    // Reforço pra mobile: alguns navegadores (Safari/iOS principalmente) só
+    // garantem autoplay se o play() for chamado por JS, mesmo com muted+playsinline no HTML.
+    video.muted = true;
+    const tentativa = video.play();
+    if (tentativa !== undefined) {
+      tentativa.catch(() => {
+        // Bloqueado mesmo assim: mostra botão grande de play em vez de ficar travado sem nada
+        const btnPlay = document.createElement('button');
+        btnPlay.textContent = '▶';
+        btnPlay.setAttribute('aria-label', 'Tocar vinheta');
+        btnPlay.style.cssText = 'width:64px;height:64px;border-radius:50%;background:#c6a15b;color:#0f1b2d;border:0;font-size:22px;cursor:pointer;position:absolute';
+        overlay.appendChild(btnPlay);
+        btnPlay.addEventListener('click', () => { btnPlay.remove(); video.play(); });
+      });
     }
   })();
 
