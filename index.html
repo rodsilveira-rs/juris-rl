@@ -357,11 +357,9 @@
           </section>
 
           <section class="card">
-            <div class="hd"><h3>Agenda</h3><span class="mini">esta semana</span></div>
-            <div class="plist">
-              <div class="prow"><span class="flag w"></span><div class="info"><div class="t">Audiência de instrução</div><div class="m">3ª Vara Trabalho · presencial</div></div><div class="due"><div class="n w">11/08</div><div class="s">14:00</div></div></div>
-              <div class="prow"><span class="flag o"></span><div class="info"><div class="t">Sessão de julgamento</div><div class="m">2ª Turma · sustentação oral</div></div><div class="due"><div class="n o">13/08</div><div class="s">10:30</div></div></div>
-              <div class="prow"><span class="flag o"></span><div class="info"><div class="t">Perícia médica</div><div class="m">IMESC · assist. técnico</div></div><div class="due"><div class="n o">14/08</div><div class="s">09:00</div></div></div>
+            <div class="hd"><h3>Agenda</h3><span class="mini">próximas audiências</span></div>
+            <div class="plist" id="agendaList">
+              <div class="prow"><div class="info"><div class="t">Carregando…</div></div></div>
             </div>
           </section>
         </div>
@@ -429,6 +427,31 @@
           <td><span class="st ${m.lida ? 'a' : 's'}">${m.lida ? 'Lida' : 'Nova'}</span></td>
         </tr>
       `).join('') : '<tr><td colspan="4">Nenhuma movimentação ainda</td></tr>';
+
+      const varaPorProcesso = {};
+      processos.forEach(p => varaPorProcesso[p.processo_id] = p.vara || '');
+
+      const hojeISO = new Date().toISOString().slice(0, 10);
+      const isoDate = d => /^\d{4}-\d{2}-\d{2}/.test(d || '');
+      const proximasAudiencias = audiencias
+        .filter(a => isoDate(a.data) && a.data >= hojeISO)
+        .sort((a, b) => a.data.localeCompare(b.data))
+        .slice(0, 5);
+
+      const agendaList = document.getElementById('agendaList');
+      agendaList.innerHTML = proximasAudiencias.length ? proximasAudiencias.map(a => {
+        const [y, m, d] = a.data.split('-');
+        return `
+          <div class="prow">
+            <span class="flag w"></span>
+            <div class="info">
+              <div class="t">${a.tipo || 'Audiência'}</div>
+              <div class="m">${varaPorProcesso[a.processo_id] || a.modalidade || '—'}</div>
+            </div>
+            <div class="due"><div class="n w">${d}/${m}</div><div class="s">${a.horario || ''}</div></div>
+          </div>
+        `;
+      }).join('') : '<div class="prow"><div class="info"><div class="t">Nenhuma audiência com data confirmada</div></div></div>';
     } catch (err) {
       console.error('Erro ao carregar dashboard:', err);
     }
