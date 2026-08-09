@@ -184,9 +184,9 @@
 </head>
 <body>
 
-<div id="introVinheta" style="position:fixed;inset:0;z-index:9999;background:#0f1b2d;display:flex;align-items:center;justify-content:center;transition:opacity .5s ease">
-  <video id="videoVinheta" src="vinheta.mp4" autoplay muted playsinline style="max-width:100%;max-height:100%"></video>
-  <button id="btnPularVinheta" style="position:absolute;bottom:24px;right:28px;color:#c7d0de;font-size:12.5px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);padding:8px 14px;border-radius:20px;cursor:pointer;font-family:inherit">Pular ▸</button>
+<div id="introVinheta" style="position:fixed;inset:0;z-index:9999;background:#0f1b2d;overflow:hidden;transition:opacity .5s ease">
+  <video id="videoVinheta" src="vinheta.mp4" autoplay muted playsinline webkit-playsinline="true" preload="auto" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);min-width:100%;min-height:100%;width:auto;height:auto;object-fit:cover"></video>
+  <button id="btnPularVinheta" style="position:absolute;bottom:24px;right:28px;color:#c7d0de;font-size:12.5px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);padding:8px 14px;border-radius:20px;cursor:pointer;font-family:inherit;z-index:2">Pular ▸</button>
 </div>
 
 <div class="app">
@@ -464,21 +464,28 @@
     video.addEventListener('ended', () => { sessionStorage.setItem('vinhetaVista','1'); esconderIntro(); });
     pular.addEventListener('click', () => { sessionStorage.setItem('vinhetaVista','1'); esconderIntro(); });
 
-    // Reforço pra mobile: alguns navegadores (Safari/iOS principalmente) só
-    // garantem autoplay se o play() for chamado por JS, mesmo com muted+playsinline no HTML.
+    // Reforço pra mobile: Safari/iOS às vezes bloqueia autoplay sem nem
+    // disparar erro no play() — por isso checamos duas vezes (catch + timeout).
     video.muted = true;
-    const tentativa = video.play();
-    if (tentativa !== undefined) {
-      tentativa.catch(() => {
-        // Bloqueado mesmo assim: mostra botão grande de play em vez de ficar travado sem nada
-        const btnPlay = document.createElement('button');
-        btnPlay.textContent = '▶';
-        btnPlay.setAttribute('aria-label', 'Tocar vinheta');
-        btnPlay.style.cssText = 'width:64px;height:64px;border-radius:50%;background:#c6a15b;color:#0f1b2d;border:0;font-size:22px;cursor:pointer;position:absolute';
-        overlay.appendChild(btnPlay);
-        btnPlay.addEventListener('click', () => { btnPlay.remove(); video.play(); });
-      });
+    video.defaultMuted = true;
+
+    function mostrarBotaoPlay(){
+      if (overlay.querySelector('.btnPlayVinheta')) return;
+      const btnPlay = document.createElement('button');
+      btnPlay.className = 'btnPlayVinheta';
+      btnPlay.textContent = '▶';
+      btnPlay.setAttribute('aria-label', 'Tocar vinheta');
+      btnPlay.style.cssText = 'width:64px;height:64px;border-radius:50%;background:#c6a15b;color:#0f1b2d;border:0;font-size:22px;cursor:pointer;position:absolute;z-index:2';
+      overlay.appendChild(btnPlay);
+      btnPlay.addEventListener('click', () => { btnPlay.remove(); video.play().catch(() => {}); });
     }
+
+    try {
+      const tentativa = video.play();
+      if (tentativa !== undefined) tentativa.catch(mostrarBotaoPlay);
+    } catch (err) { mostrarBotaoPlay(); }
+
+    setTimeout(() => { if (video.paused) mostrarBotaoPlay(); }, 700);
   })();
 
   // ===== Config da API (Apps Script) =====
