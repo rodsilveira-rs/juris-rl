@@ -271,18 +271,18 @@
       <div class="kpis">
         <div class="kpi">
           <div class="lab"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Processos</div>
-          <div class="val">428</div>
-          <div class="sub"><span class="up">+17</span> este mês</div>
+          <div class="val" id="kpiProcessos">–</div>
+          <div class="sub">total cadastrado</div>
         </div>
         <div class="kpi alert">
           <div class="lab"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/></svg>Prazos 7 dias</div>
-          <div class="val">6</div>
-          <div class="sub"><span class="dn">2 críticos</span> · ≤48h</div>
+          <div class="val">—</div>
+          <div class="sub">em breve (extração de prazos)</div>
         </div>
         <div class="kpi">
           <div class="lab"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Audiências</div>
-          <div class="val">4</div>
-          <div class="sub">próximos 15 dias</div>
+          <div class="val" id="kpiAudiencias">–</div>
+          <div class="sub">com data marcada</div>
         </div>
         <div class="kpi">
           <div class="lab"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 15l2 2 4-4"/></svg>PDFs no mês</div>
@@ -330,11 +330,8 @@
             <div class="hd"><h3>Movimentações recentes</h3><span class="mini">últimas 24h</span></div>
             <table class="tbl">
               <thead><tr><th>Processo</th><th>Cliente</th><th>Movimentação</th><th>Status</th></tr></thead>
-              <tbody>
-                <tr><td class="proc">0100377-20…</td><td>Comércio Aurora</td><td>Sentença publicada</td><td><span class="st s">Ação req.</span></td></tr>
-                <tr><td class="proc">0048812-57…</td><td>Vale Verde</td><td>Juntada de petição</td><td><span class="st a">Em dia</span></td></tr>
-                <tr><td class="proc">0257373-44…</td><td>M. R. Souza</td><td>Despacho — intimação</td><td><span class="st s">Prazo aberto</span></td></tr>
-                <tr><td class="proc">0091148-03…</td><td>Espólio Castro</td><td>Perícia agendada</td><td><span class="st a">Em dia</span></td></tr>
+              <tbody id="tblMovimentacoes">
+                <tr><td colspan="4">Carregando…</td></tr>
               </tbody>
             </table>
           </section>
@@ -382,7 +379,7 @@
 
 <script>
   // ===== Config da API (Apps Script) =====
-  const API_URL = 'https://script.google.com/macros/s/SEU_ID_AQUI/exec';
+  const API_URL = 'https://script.google.com/macros/s/AKfycbzoOpxgSCeqbKdNnXuOsmJBf77Hg3XemWnkLBiqYu3iA3Kdz2K-9Xz8vsGhu_2adkpg/exec';
   const API_TOKEN = 'jurisrl-lab-2026-Qz7mWvB2rL9kT4x';
 
   async function apiGet(modulo) {
@@ -408,6 +405,35 @@
   }));
   // menu mobile
   document.getElementById('menuBtn').addEventListener('click',()=>document.getElementById('side').classList.toggle('open'));
+
+  // ===== Carregar dados reais =====
+  async function carregarDashboard() {
+    try {
+      const [processos, audiencias, movs] = await Promise.all([
+        apiGet('processos'), apiGet('audiencias'), apiGet('movimentacoes')
+      ]);
+
+      document.getElementById('kpiProcessos').textContent = processos.length;
+      document.getElementById('kpiAudiencias').textContent = audiencias.filter(a => a.data).length;
+
+      const tbody = document.getElementById('tblMovimentacoes');
+      const clientesPorProcesso = {};
+      processos.forEach(p => clientesPorProcesso[p.processo_id] = p.parte_contraria || '—');
+
+      const recentes = movs.slice(-6).reverse();
+      tbody.innerHTML = recentes.length ? recentes.map(m => `
+        <tr>
+          <td class="proc">${(m.processo_id || '').slice(-10)}</td>
+          <td>${clientesPorProcesso[m.processo_id] || '—'}</td>
+          <td>${(m.texto || '').slice(0, 60)}${(m.texto||'').length > 60 ? '…' : ''}</td>
+          <td><span class="st ${m.lida ? 'a' : 's'}">${m.lida ? 'Lida' : 'Nova'}</span></td>
+        </tr>
+      `).join('') : '<tr><td colspan="4">Nenhuma movimentação ainda</td></tr>';
+    } catch (err) {
+      console.error('Erro ao carregar dashboard:', err);
+    }
+  }
+  carregarDashboard();
 </script>
 </body>
 </html>
