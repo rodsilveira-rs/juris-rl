@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Juris RL — Gestão Jurídica</title>
+<style>
+  :root{
+    --ink:#0f1b2d;          /* navy tinta — marca / sidebar */
+    --ink-2:#16273d;
+    --ink-3:#1d3350;
+    --brass:#c6a15b;        /* latão da balança */
+    --brass-lo:#a9863f;
+    --brass-soft:#efe6d2;
+    --steel:#3d6a99;        /* azul-aço tech */
+    --app:#f4f6f9;          /* fundo do app */
+    --surface:#ffffff;
+    --line:#e5e9ef;
+    --line-2:#eef1f5;
+    --tx:#182234;
+    --tx-muted:#657085;
+    --danger:#c0392b;
+    --warn:#c88a2b;
+    --ok:#2f8055;
+    --radius:12px;
+    --shadow:0 1px 2px rgba(15,27,45,.04), 0 10px 30px rgba(15,27,45,.06);
+    --shadow-sm:0 1px 2px rgba(15,27,45,.05);
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--app);color:var(--tx);font:15px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  button{font:inherit;cursor:pointer}
+  ::selection{background:var(--brass-soft)}
+
+  .app{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
+
+  /* ============ SIDEBAR ============ */
+  .side{
+    background:linear-gradient(180deg,var(--ink) 0%,#0c1626 100%);
+    color:#c7d0de;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
+    border-right:1px solid rgba(255,255,255,.04);
+  }
+  .brand{display:flex;align-items:center;gap:11px;padding:20px 20px 18px}
+  .brand .mark{width:38px;height:38px;flex:none}
+  .brand .wm{font-family:var(--serif);font-size:21px;font-weight:600;color:#fff;letter-spacing:.2px;line-height:1}
+  .brand .wm .x{color:var(--brass)}
+  .brand .tag{display:block;font-family:var(--sans);font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:#7c879a;margin-top:3px;font-weight:600}
+
+  .nav{padding:8px 12px;overflow-y:auto;flex:1}
+  .nav .grp{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#5f6a7d;margin:16px 12px 7px;font-weight:700}
+  .nav a{
+    display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:9px;color:#b3bccb;
+    font-size:13.5px;font-weight:500;margin-bottom:2px;position:relative;transition:background .12s,color .12s;
+  }
+  .nav a svg{width:18px;height:18px;flex:none;stroke:currentColor;stroke-width:1.7;fill:none}
+  .nav a:hover{background:rgba(255,255,255,.05);color:#e8edf3}
+  .nav a.active{background:rgba(198,161,91,.13);color:#fff}
+  .nav a.active::before{content:"";position:absolute;left:-12px;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--brass)}
+  .nav a .badge{margin-left:auto;background:var(--danger);color:#fff;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:10px}
+
+  .side .who{margin:12px;padding:12px;border-radius:11px;background:rgba(255,255,255,.04);display:flex;align-items:center;gap:10px}
+  .side .who .av{width:34px;height:34px;border-radius:9px;background:var(--brass);color:var(--ink);display:grid;place-items:center;font-weight:700;font-family:var(--serif);font-size:15px;flex:none}
+  .side .who .nm{font-size:12.5px;color:#e8edf3;font-weight:600;line-height:1.2}
+  .side .who .rl{font-size:11px;color:#8b96a8}
+
+  /* ============ MAIN ============ */
+  .main{display:flex;flex-direction:column;min-width:0}
+  .top{
+    background:rgba(244,246,249,.85);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);padding:18px 30px 14px;position:sticky;top:0;z-index:5;
+  }
+  .top .hi{font-family:var(--serif);font-size:24px;font-weight:600;color:var(--ink);letter-spacing:-.2px}
+  .top .date{color:var(--tx-muted);font-size:13px;margin-top:1px}
+  .top .row{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .search{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-width:230px;color:var(--tx-muted)}
+  .search svg{width:16px;height:16px;stroke:currentColor;stroke-width:1.8;fill:none}
+  .search input{border:0;outline:0;background:none;font:inherit;font-size:13px;color:var(--tx);width:100%}
+
+  /* barra de contexto inteligente */
+  .ctx{display:flex;gap:22px;flex-wrap:wrap;padding:11px 30px;border-bottom:1px solid var(--line);background:var(--surface)}
+  .ctx .it{font-size:12.5px;color:var(--tx-muted);display:flex;align-items:center;gap:7px}
+  .ctx .it b{color:var(--tx);font-weight:700;font-size:14px}
+  .ctx .dot{width:7px;height:7px;border-radius:50%}
+  .dot.d{background:var(--danger)} .dot.w{background:var(--warn)} .dot.o{background:var(--ok)} .dot.s{background:var(--steel)}
+
+  .content{padding:24px 30px 48px;max-width:1180px;width:100%}
+
+  /* KPIs */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+  @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow-sm);position:relative;overflow:hidden}
+  .kpi::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--brass)}
+  .kpi.alert::after{background:var(--danger)}
+  .kpi .lab{font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--tx-muted);font-weight:600;display:flex;align-items:center;gap:7px}
+  .kpi .lab svg{width:15px;height:15px;stroke:currentColor;stroke-width:1.7;fill:none;opacity:.75}
+  .kpi .val{font-family:var(--serif);font-size:33px;font-weight:600;color:var(--ink);line-height:1.1;margin-top:8px}
+  .kpi .sub{font-size:12px;color:var(--tx-muted);margin-top:2px}
+  .kpi .sub .up{color:var(--ok);font-weight:600} .kpi .sub .dn{color:var(--danger);font-weight:600}
+
+  .cols{display:grid;grid-template-columns:1.55fr 1fr;gap:20px}
+  @media(max-width:980px){.cols{grid-template-columns:1fr}}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-sm);overflow:hidden}
+  .card .hd{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--line-2)}
+  .card .hd h3{margin:0;font-family:var(--serif);font-size:16px;color:var(--ink);font-weight:600}
+  .card .hd .mini{font-size:12px;color:var(--steel);font-weight:600}
+
+  /* RADAR DE PRAZOS — elemento de assinatura */
+  .radar{padding:20px 18px 8px}
+  .radar .scale{position:relative;height:2px;background:var(--line);margin:34px 6px 10px}
+  .radar .tick{position:absolute;top:-26px;transform:translateX(-50%);font-size:10.5px;color:var(--tx-muted);text-align:center;font-weight:600}
+  .radar .tick i{display:block;width:1px;height:10px;background:var(--line);margin:4px auto 0}
+  .radar .pin{position:absolute;top:50%;transform:translate(-50%,-50%);width:15px;height:15px;border-radius:50%;border:3px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer;transition:transform .12s}
+  .radar .pin:hover{transform:translate(-50%,-50%) scale(1.35);z-index:3}
+  .radar .pin.d{background:var(--danger)} .radar .pin.w{background:var(--warn)} .radar .pin.o{background:var(--ok)}
+  .radar .now{position:absolute;top:-6px;bottom:-6px;width:2px;background:var(--ink);left:2%}
+  .radar .now::after{content:"hoje";position:absolute;top:-17px;left:50%;transform:translateX(-50%);font-size:9.5px;font-weight:700;color:var(--ink);letter-spacing:.04em}
+  .radar .legend{display:flex;gap:16px;padding:8px 6px 4px;font-size:11.5px;color:var(--tx-muted)}
+  .radar .legend span{display:flex;align-items:center;gap:6px}
+
+  /* lista de prazos */
+  .plist{padding:4px 0 8px}
+  .prow{display:flex;align-items:center;gap:13px;padding:11px 18px;border-top:1px solid var(--line-2)}
+  .prow:first-child{border-top:0}
+  .prow .flag{width:9px;height:9px;border-radius:50%;flex:none}
+  .flag.d{background:var(--danger)} .flag.w{background:var(--warn)} .flag.o{background:var(--ok)}
+  .prow .info{min-width:0;flex:1}
+  .prow .info .t{font-size:13.5px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .prow .info .m{font-size:12px;color:var(--tx-muted);margin-top:1px}
+  .prow .due{text-align:right;flex:none}
+  .prow .due .n{font-size:13px;font-weight:700}
+  .prow .due .n.d{color:var(--danger)} .prow .due .n.w{color:var(--warn)} .prow .due .n.o{color:var(--ok)}
+  .prow .due .s{font-size:11px;color:var(--tx-muted)}
+
+  /* smart pdf card */
+  .pdfbox{padding:18px}
+  .dz{border:1.5px dashed var(--line);border-radius:10px;padding:22px 16px;text-align:center;background:#fafbfc;transition:.15s}
+  .dz:hover{border-color:var(--steel);background:#f5f9fc}
+  .dz svg{width:26px;height:26px;stroke:var(--steel);stroke-width:1.6;fill:none;margin-bottom:6px}
+  .dz .t{font-size:13.5px;font-weight:600;color:var(--tx)}
+  .dz .s{font-size:12px;color:var(--tx-muted);margin-top:2px}
+  .pdfmeta{display:flex;gap:10px;margin-top:14px}
+  .chip{flex:1;background:#fafbfc;border:1px solid var(--line);border-radius:9px;padding:9px 11px;text-align:center}
+  .chip .k{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--tx-muted);font-weight:600}
+  .chip .v{font-family:var(--serif);font-size:16px;color:var(--ink);font-weight:600;margin-top:2px}
+
+  /* tabela mini */
+  .tbl{width:100%;border-collapse:collapse}
+  .tbl th{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--tx-muted);text-align:left;font-weight:700;padding:10px 18px;border-bottom:1px solid var(--line-2)}
+  .tbl td{padding:11px 18px;border-bottom:1px solid var(--line-2);font-size:13px}
+  .tbl tr:last-child td{border-bottom:0}
+  .tbl .proc{font-variant-numeric:tabular-nums;color:var(--steel);font-weight:600}
+  .st{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600}
+  .st::before{content:"";width:7px;height:7px;border-radius:50%}
+  .st.a{color:var(--ok)} .st.a::before{background:var(--ok)}
+  .st.s{color:var(--warn)} .st.s::before{background:var(--warn)}
+
+  .btn{display:inline-flex;align-items:center;gap:7px;background:var(--ink);color:#fff;border:0;border-radius:9px;padding:9px 15px;font-size:13px;font-weight:600}
+  .btn:hover{background:var(--ink-2)}
+  .btn.brass{background:var(--brass);color:var(--ink)} .btn.brass:hover{background:var(--brass-lo)}
+  .btn svg{width:15px;height:15px;stroke:currentColor;stroke-width:2;fill:none}
+
+  /* empty state dos módulos */
+  .empty{display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:70px 20px;color:var(--tx-muted)}
+  .empty svg{width:40px;height:40px;stroke:var(--brass);stroke-width:1.4;fill:none;margin-bottom:14px}
+  .empty h3{font-family:var(--serif);font-size:20px;color:var(--ink);margin:0 0 6px;font-weight:600}
+  .empty p{max-width:340px;font-size:13.5px;margin:0}
+
+  :focus-visible{outline:2px solid var(--steel);outline-offset:2px}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+  @media(max-width:760px){
+    .app{grid-template-columns:1fr}
+    .side{position:fixed;left:-260px;z-index:50;transition:left .2s;box-shadow:0 0 40px rgba(0,0,0,.3)}
+    .side.open{left:0}
+    .menu-btn{display:inline-flex!important}
+  }
+  .menu-btn{display:none;align-items:center;justify-content:center;width:38px;height:38px;border-radius:9px;background:var(--surface);border:1px solid var(--line)}
+  .menu-btn svg{width:19px;height:19px;stroke:var(--ink);stroke-width:1.8;fill:none}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="side" id="side">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <!-- balança + circuito -->
+        <line x1="24" y1="12" x2="24" y2="37" stroke="#c6a15b" stroke-width="2.2" stroke-linecap="round"/>
+        <line x1="9" y1="16" x2="39" y2="16" stroke="#c6a15b" stroke-width="2.2" stroke-linecap="round"/>
+        <circle cx="24" cy="12" r="3" fill="#c6a15b"/>
+        <!-- base tipo chip -->
+        <line x1="16" y1="38" x2="32" y2="38" stroke="#c6a15b" stroke-width="2.2" stroke-linecap="round"/>
+        <line x1="19" y1="41" x2="19" y2="43" stroke="#7c879a" stroke-width="1.6" stroke-linecap="round"/>
+        <line x1="24" y1="41" x2="24" y2="43.5" stroke="#7c879a" stroke-width="1.6" stroke-linecap="round"/>
+        <line x1="29" y1="41" x2="29" y2="43" stroke="#7c879a" stroke-width="1.6" stroke-linecap="round"/>
+        <!-- suspensões -->
+        <line x1="9" y1="16" x2="9" y2="21" stroke="#c6a15b" stroke-width="1.5"/>
+        <line x1="39" y1="16" x2="39" y2="21" stroke="#c6a15b" stroke-width="1.5"/>
+        <!-- pratos -->
+        <path d="M3 21 a6 6 0 0 0 12 0" stroke="#c6a15b" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M33 21 a6 6 0 0 0 12 0" stroke="#c6a15b" stroke-width="2.2" stroke-linecap="round"/>
+        <!-- nós tech nas pontas -->
+        <circle cx="9" cy="16" r="2" fill="#0f1b2d" stroke="#c6a15b" stroke-width="1.5"/>
+        <circle cx="39" cy="16" r="2" fill="#0f1b2d" stroke="#c6a15b" stroke-width="1.5"/>
+      </svg>
+      <div>
+        <div class="wm">Juris <span class="x">RL</span></div>
+        <span class="tag">Gestão Jurídica</span>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a href="#" class="active" data-mod="Dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Painel</a>
+      <a href="#" data-mod="Processos"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Processos</a>
+      <a href="#" data-mod="Prazos"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>Prazos<span class="badge">6</span></a>
+      <a href="#" data-mod="Audiências"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Audiências</a>
+      <a href="#" data-mod="Perícias"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Perícias</a>
+
+      <div class="grp">Documentos</div>
+      <a href="#" data-mod="Documentos"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Arquivos</a>
+      <a href="#" data-mod="Smart PDF"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 15l2 2 4-4"/></svg>Smart PDF</a>
+
+      <div class="grp">Cadastros</div>
+      <a href="#" data-mod="Clientes"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M3 20a6 6 0 0 1 12 0M16 5.5a3.5 3.5 0 0 1 0 6.5M21 20a6 6 0 0 0-4-5.6"/></svg>Clientes</a>
+      <a href="#" data-mod="Configurações"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg>Configurações</a>
+    </nav>
+
+    <div class="who">
+      <div class="av">L</div>
+      <div>
+        <div class="nm">Dra. Letícia</div>
+        <div class="rl">Advogada · Admin</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+    <div class="top">
+      <div class="row">
+        <div style="display:flex;align-items:center;gap:14px">
+          <button class="menu-btn" id="menuBtn" aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+          <div>
+            <div class="hi" id="hiTitle">Boa tarde, Dra. Letícia</div>
+            <div class="date">Sexta-feira, 8 de agosto de 2026</div>
+          </div>
+        </div>
+        <div class="search">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input placeholder="Buscar processo, cliente ou nº…">
+        </div>
+      </div>
+    </div>
+
+    <!-- barra de contexto inteligente (reaproveitada do projeto de Compras) -->
+    <div class="ctx" id="ctx">
+      <span class="it"><span class="dot s"></span><b>428</b> processos ativos</span>
+      <span class="it"><span class="dot w"></span><b>6</b> prazos esta semana</span>
+      <span class="it"><span class="dot d"></span><b>2</b> vencendo em 48h</span>
+      <span class="it"><span class="dot o"></span><b>4</b> audiências marcadas</span>
+      <span class="it"><span class="dot s"></span><b>17</b> novos no mês</span>
+    </div>
+
+    <!-- ===== PAINEL ===== -->
+    <main class="content" id="viewDashboard">
+      <div class="kpis">
+        <div class="kpi">
+          <div class="lab"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Processos</div>
+          <div class="val">428</div>
+          <div class="sub"><span class="up">+17</span> este mês</div>
+        </div>
+        <div class="kpi alert">
+          <div class="lab"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5"/></svg>Prazos 7 dias</div>
+          <div class="val">6</div>
+          <div class="sub"><span class="dn">2 críticos</span> · ≤48h</div>
+        </div>
+        <div class="kpi">
+          <div class="lab"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Audiências</div>
+          <div class="val">4</div>
+          <div class="sub">próximos 15 dias</div>
+        </div>
+        <div class="kpi">
+          <div class="lab"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 15l2 2 4-4"/></svg>PDFs no mês</div>
+          <div class="val">213</div>
+          <div class="sub">ajustados p/ protocolo</div>
+        </div>
+      </div>
+
+      <div class="cols">
+        <div style="display:flex;flex-direction:column;gap:20px">
+          <!-- RADAR DE PRAZOS -->
+          <section class="card">
+            <div class="hd"><h3>Radar de prazos</h3><span class="mini">próximos 14 dias</span></div>
+            <div class="radar">
+              <div class="scale">
+                <span class="now"></span>
+                <span class="tick" style="left:2%">Hoje<i></i></span>
+                <span class="tick" style="left:26%">+3d<i></i></span>
+                <span class="tick" style="left:50%">+7d<i></i></span>
+                <span class="tick" style="left:74%">+10d<i></i></span>
+                <span class="tick" style="left:98%">+14d<i></i></span>
+                <span class="pin d" style="left:8%"  title="Contestação · vence amanhã"></span>
+                <span class="pin d" style="left:14%" title="Réplica · vence em 2 dias"></span>
+                <span class="pin w" style="left:30%" title="Recurso · vence em 4 dias"></span>
+                <span class="pin w" style="left:44%" title="Manifestação · vence em 6 dias"></span>
+                <span class="pin o" style="left:66%" title="Cumprimento · vence em 9 dias"></span>
+                <span class="pin o" style="left:90%" title="Embargos · vence em 13 dias"></span>
+              </div>
+              <div class="legend">
+                <span><span class="pin d" style="position:static;width:10px;height:10px;border:0;box-shadow:none"></span>Crítico (≤48h)</span>
+                <span><span class="pin w" style="position:static;width:10px;height:10px;border:0;box-shadow:none"></span>Atenção</span>
+                <span><span class="pin o" style="position:static;width:10px;height:10px;border:0;box-shadow:none"></span>No prazo</span>
+              </div>
+            </div>
+            <div class="plist">
+              <div class="prow"><span class="flag d"></span><div class="info"><div class="t">Contestação — Comércio Aurora Ltda × Banco Meridional</div><div class="m">PJe · 5ª Vara Cível · resp. Dra. Letícia</div></div><div class="due"><div class="n d">amanhã</div><div class="s">09/08</div></div></div>
+              <div class="prow"><span class="flag d"></span><div class="info"><div class="t">Réplica — Construtora Vale Verde × Município de Serra</div><div class="m">e-SAJ · 2ª Vara Fazenda</div></div><div class="due"><div class="n d">2 dias</div><div class="s">10/08</div></div></div>
+              <div class="prow"><span class="flag w"></span><div class="info"><div class="t">Recurso Inominado — M. R. Souza × Telecom Brasil S.A.</div><div class="m">Portal TJRJ · Juizado Especial</div></div><div class="due"><div class="n w">4 dias</div><div class="s">12/08</div></div></div>
+              <div class="prow"><span class="flag o"></span><div class="info"><div class="t">Cumprimento de sentença — Espólio Castro × Seguradora Ápice</div><div class="m">e-SAJ · 1ª Vara Cível</div></div><div class="due"><div class="n o">9 dias</div><div class="s">17/08</div></div></div>
+            </div>
+          </section>
+
+          <!-- PROCESSOS RECENTES -->
+          <section class="card">
+            <div class="hd"><h3>Movimentações recentes</h3><span class="mini">últimas 24h</span></div>
+            <table class="tbl">
+              <thead><tr><th>Processo</th><th>Cliente</th><th>Movimentação</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr><td class="proc">0100377-20…</td><td>Comércio Aurora</td><td>Sentença publicada</td><td><span class="st s">Ação req.</span></td></tr>
+                <tr><td class="proc">0048812-57…</td><td>Vale Verde</td><td>Juntada de petição</td><td><span class="st a">Em dia</span></td></tr>
+                <tr><td class="proc">0257373-44…</td><td>M. R. Souza</td><td>Despacho — intimação</td><td><span class="st s">Prazo aberto</span></td></tr>
+                <tr><td class="proc">0091148-03…</td><td>Espólio Castro</td><td>Perícia agendada</td><td><span class="st a">Em dia</span></td></tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
+
+        <!-- COLUNA DIREITA -->
+        <div style="display:flex;flex-direction:column;gap:20px">
+          <section class="card">
+            <div class="hd"><h3>Smart PDF</h3><span class="mini">pronto p/ protocolar</span></div>
+            <div class="pdfbox">
+              <div class="dz">
+                <svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                <div class="t">Arraste o PDF do processo</div>
+                <div class="s">seleciona o tribunal e ajusta sozinho</div>
+              </div>
+              <div class="pdfmeta">
+                <div class="chip"><div class="k">Tribunal</div><div class="v">e-SAJ</div></div>
+                <div class="chip"><div class="k">Limite/pág.</div><div class="v">300 KB</div></div>
+                <div class="chip"><div class="k">Limite/arq.</div><div class="v">30 MB</div></div>
+              </div>
+              <button class="btn brass" style="width:100%;justify-content:center;margin-top:14px"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Processar documento</button>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="hd"><h3>Agenda</h3><span class="mini">esta semana</span></div>
+            <div class="plist">
+              <div class="prow"><span class="flag w"></span><div class="info"><div class="t">Audiência de instrução</div><div class="m">3ª Vara Trabalho · presencial</div></div><div class="due"><div class="n w">11/08</div><div class="s">14:00</div></div></div>
+              <div class="prow"><span class="flag o"></span><div class="info"><div class="t">Sessão de julgamento</div><div class="m">2ª Turma · sustentação oral</div></div><div class="due"><div class="n o">13/08</div><div class="s">10:30</div></div></div>
+              <div class="prow"><span class="flag o"></span><div class="info"><div class="t">Perícia médica</div><div class="m">IMESC · assist. técnico</div></div><div class="due"><div class="n o">14/08</div><div class="s">09:00</div></div></div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <!-- ===== EMPTY STATE (demais módulos) ===== -->
+    <div class="empty" id="viewEmpty">
+      <svg viewBox="0 0 48 48"><line x1="24" y1="14" x2="24" y2="36" stroke-width="2"/><line x1="12" y1="18" x2="36" y2="18" stroke-width="2"/><path d="M6 22 a6 6 0 0 0 12 0" stroke-width="2"/><path d="M30 22 a6 6 0 0 0 12 0" stroke-width="2"/></svg>
+      <h3 id="emptyTitle">Módulo em construção</h3>
+      <p>Este módulo faz parte do roadmap do Juris RL. Vamos construí-lo no chat dedicado — o painel já está no ar.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ===== Config da API (Apps Script) =====
+  const API_URL = 'https://script.google.com/macros/s/SEU_ID_AQUI/exec';
+  const API_TOKEN = 'jurisrl-lab-2026-Qz7mWvB2rL9kT4x';
+
+  async function apiGet(modulo) {
+    const url = `${API_URL}?modulo=${modulo}&token=${API_TOKEN}`;
+    const res = await fetch(url);
+    return res.json();
+  }
+
+  // navegação (protótipo): troca o "ativo" e mostra painel ou empty state
+  const links = document.querySelectorAll('.nav a');
+  const dash = document.getElementById('viewDashboard');
+  const empty = document.getElementById('viewEmpty');
+  const emptyTitle = document.getElementById('emptyTitle');
+  const ctx = document.getElementById('ctx');
+  links.forEach(a=>a.addEventListener('click',e=>{
+    e.preventDefault();
+    links.forEach(x=>x.classList.remove('active'));
+    a.classList.add('active');
+    const mod = a.dataset.mod;
+    if(mod==='Dashboard'){ dash.style.display='block'; empty.style.display='none'; ctx.style.display='flex'; }
+    else { dash.style.display='none'; empty.style.display='flex'; ctx.style.display='none'; emptyTitle.textContent = mod; }
+    document.getElementById('side').classList.remove('open');
+  }));
+  // menu mobile
+  document.getElementById('menuBtn').addEventListener('click',()=>document.getElementById('side').classList.toggle('open'));
+</script>
+</body>
+</html>
