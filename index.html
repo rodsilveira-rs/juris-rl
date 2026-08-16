@@ -625,6 +625,10 @@
       }
       return `<div><label>${c.label}</label><input id="campo_${c.key}" type="${c.type || 'text'}" value="${valorEscapado}"></div>`;
     }).join('');
+    body.querySelectorAll('input[list]').forEach(inp => {
+      inp.addEventListener('focus', () => { inp.dataset.original = inp.value; inp.value = ''; });
+      inp.addEventListener('blur', () => { if (!inp.value) inp.value = inp.dataset.original || ''; });
+    });
     _modalAoSalvar = aoSalvar;
     document.getElementById('modalOverlay').classList.add('open');
   }
