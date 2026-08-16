@@ -22,6 +22,7 @@
     --danger:#c0392b;
     --warn:#c88a2b;
     --ok:#2f8055;
+    --aurora:linear-gradient(90deg,var(--brass),var(--steel),var(--ink),var(--steel),var(--brass));
     --radius:12px;
     --shadow:0 1px 2px rgba(15,27,45,.04), 0 10px 30px rgba(15,27,45,.06);
     --shadow-sm:0 1px 2px rgba(15,27,45,.05);
@@ -29,10 +30,12 @@
     --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
   }
   /* ===== Paletas alternativas do conteúdo (sidebar não muda) ===== */
-  body[data-theme="rosa"]{ --app:#fdf1f6; --surface:#fffbfd; --line:#f6dce8; --line-2:#faeaf1; --tx:#3a1626; --tx-muted:#8a5567; }
-  body[data-theme="azul"]{ --app:#eef6fc; --surface:#ffffff; --line:#d9e8f5; --line-2:#e8f2fa; --tx:#122a3d; --tx-muted:#5c7891; }
-  body[data-theme="verde"]{ --app:#eef8f1; --surface:#ffffff; --line:#d7ecdd; --line-2:#e7f4ea; --tx:#12301c; --tx-muted:#5a7d64; }
-  body[data-theme="cinza"]{ --app:#f1f2f4; --surface:#ffffff; --line:#dde0e4; --line-2:#e9ebee; --tx:#1c1f24; --tx-muted:#6b7280; }
+  body[data-theme="rosa"]{ --app:#fdf1f6; --surface:#fffbfd; --line:#f6dce8; --line-2:#faeaf1; --tx:#3a1626; --tx-muted:#8a5567; --aurora:linear-gradient(90deg,#f7b8d1,#e888b0,#c65a8f,#e888b0,#f7b8d1); }
+  body[data-theme="azul"]{ --app:#eef6fc; --surface:#ffffff; --line:#d9e8f5; --line-2:#e8f2fa; --tx:#122a3d; --tx-muted:#5c7891; --aurora:linear-gradient(90deg,#8fc4ee,#4a90c9,#2c5f8a,#4a90c9,#8fc4ee); }
+  body[data-theme="verde"]{ --app:#eef8f1; --surface:#ffffff; --line:#d7ecdd; --line-2:#e7f4ea; --tx:#12301c; --tx-muted:#5a7d64; --aurora:linear-gradient(90deg,#8fd4a8,#4fa872,#2c7a4a,#4fa872,#8fd4a8); }
+  body[data-theme="cinza"]{ --app:#f1f2f4; --surface:#ffffff; --line:#dde0e4; --line-2:#e9ebee; --tx:#1c1f24; --tx-muted:#6b7280; --aurora:linear-gradient(90deg,#b8bcc4,#8a919c,#5c636e,#8a919c,#b8bcc4); }
+  body[data-theme="amarelo"]{ --app:#fdf8e8; --surface:#fffdf5; --line:#f0e2b0; --line-2:#f7eecb; --tx:#3a2f0a; --tx-muted:#8a7a45; --aurora:linear-gradient(90deg,#f5da8a,#e8bc4a,#c99a2a,#e8bc4a,#f5da8a); }
+  body[data-theme="bege"]{ --app:#f7f1e6; --surface:#fffcf7; --line:#e6d9c0; --line-2:#f0e6d2; --tx:#332a1c; --tx-muted:#8a7860; --aurora:linear-gradient(90deg,#e6d3b3,#cbab7a,#a8834f,#cbab7a,#e6d3b3); }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%}
   body{background:var(--app);color:var(--tx);font:15px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
@@ -93,6 +96,19 @@
   .theme-swatch[data-theme="azul"]{background:#eef6fc}
   .theme-swatch[data-theme="verde"]{background:#eef8f1}
   .theme-swatch[data-theme="cinza"]{background:#f1f2f4}
+  .theme-swatch[data-theme="amarelo"]{background:#fdf3d0}
+  .theme-swatch[data-theme="bege"]{background:#f2e6d0}
+
+  /* barra de upload estilo "aurora" — usa as cores do tema ativo */
+  .upload-progress{display:none;margin-top:10px}
+  .upload-progress .track{height:8px;border-radius:6px;overflow:hidden;background:var(--line);position:relative}
+  .upload-progress .bar{height:100%;width:100%;background-image:var(--aurora);background-size:300% 100%;animation:auroraFlow 1.8s linear infinite;border-radius:6px}
+  @keyframes auroraFlow{0%{background-position:0% 50%}100%{background-position:300% 50%}}
+  .upload-progress .label{font-size:12px;color:var(--tx-muted);margin-top:6px;display:flex;align-items:center;gap:6px}
+  .upload-progress.success .bar{animation:none;background-image:none;background-color:var(--ok)}
+  .upload-progress.success .label{color:var(--ok);font-weight:600}
+  .upload-progress.error .bar{animation:none;background-image:none;background-color:var(--danger)}
+  .upload-progress.error .label{color:var(--danger);font-weight:600}
 
   /* barra de contexto inteligente */
   .ctx{display:flex;gap:22px;flex-wrap:wrap;padding:11px 30px;border-bottom:1px solid var(--line);background:var(--surface)}
@@ -279,6 +295,8 @@
             <button class="theme-swatch" data-theme="azul" title="Azul claro"></button>
             <button class="theme-swatch" data-theme="verde" title="Verde claro"></button>
             <button class="theme-swatch" data-theme="cinza" title="Cinza claro"></button>
+            <button class="theme-swatch" data-theme="amarelo" title="Amarelo claro"></button>
+            <button class="theme-swatch" data-theme="bege" title="Bege claro"></button>
           </div>
           <div class="search">
             <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
@@ -454,6 +472,10 @@
           <button id="btnEnviarDocumento" style="background:var(--ink);color:#fff;border:0;border-radius:8px;padding:9px 16px;font:inherit;font-size:13px;cursor:pointer">Enviar</button>
         </div>
         <div id="docUploadStatus" style="font-size:12px;color:var(--tx-muted);margin-top:8px"></div>
+        <div id="docUploadProgress" class="upload-progress">
+          <div class="track"><div class="bar"></div></div>
+          <div class="label" id="docUploadLabel">Enviando…</div>
+        </div>
       </section>
       <section class="card">
         <div class="hd"><h3>Documentos</h3><span class="mini" id="docCount">—</span></div>
@@ -964,7 +986,13 @@
     const processoId = document.getElementById('docProcessoSelect').value;
     const fileInput = document.getElementById('docFileInput');
     const status = document.getElementById('docUploadStatus');
+    const progress = document.getElementById('docUploadProgress');
+    const label = document.getElementById('docUploadLabel');
     const file = fileInput.files[0];
+
+    status.textContent = '';
+    progress.style.display = 'none';
+    progress.className = 'upload-progress';
 
     if (!processoId) { status.textContent = 'Selecione um processo antes de enviar.'; status.style.color = 'var(--danger)'; return; }
     if (!file) { status.textContent = 'Escolha um arquivo.'; status.style.color = 'var(--danger)'; return; }
@@ -972,21 +1000,26 @@
       status.textContent = `Arquivo muito grande (máx. ${LIMITE_UPLOAD_MB} MB).`; status.style.color = 'var(--danger)'; return;
     }
 
-    status.textContent = 'Enviando…'; status.style.color = 'var(--tx-muted)';
+    progress.style.display = 'block';
+    label.textContent = 'Enviando…';
     try {
       const base64 = await fileParaBase64(file);
       const resultado = await apiPost('uploadDocumento', {
         processo_id: processoId, nome_arquivo: file.name, mime_type: file.type, conteudo_base64: base64
       });
       if (resultado.ok) {
-        status.textContent = 'Enviado com sucesso.'; status.style.color = 'var(--ok)';
+        progress.className = 'upload-progress success';
+        label.textContent = '✓ Concluído com sucesso';
         fileInput.value = '';
         carregarDocumentosPage();
+        setTimeout(() => { progress.style.display = 'none'; }, 3000);
       } else {
-        status.textContent = 'Erro: ' + (resultado.erro || 'falha desconhecida'); status.style.color = 'var(--danger)';
+        progress.className = 'upload-progress error';
+        label.textContent = 'Erro: ' + (resultado.erro || 'falha desconhecida');
       }
     } catch (err) {
-      status.textContent = 'Erro ao enviar: ' + err.message; status.style.color = 'var(--danger)';
+      progress.className = 'upload-progress error';
+      label.textContent = 'Erro ao enviar: ' + err.message;
     }
   });
 
