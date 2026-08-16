@@ -442,6 +442,28 @@
       </section>
     </main>
 
+    <!-- ===== DOCUMENTOS (upload + lista, armazenado no Drive) ===== -->
+    <main class="content" id="viewDocumentos" style="display:none">
+      <section class="card" style="padding:18px;margin-bottom:16px">
+        <div class="hd" style="margin-bottom:12px"><h3>Enviar documento</h3></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <select id="docProcessoSelect" style="flex:1;min-width:220px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;font-size:13px">
+            <option value="">Carregando processos…</option>
+          </select>
+          <input type="file" id="docFileInput" style="flex:1;min-width:200px;font-size:13px">
+          <button id="btnEnviarDocumento" style="background:var(--ink);color:#fff;border:0;border-radius:8px;padding:9px 16px;font:inherit;font-size:13px;cursor:pointer">Enviar</button>
+        </div>
+        <div id="docUploadStatus" style="font-size:12px;color:var(--tx-muted);margin-top:8px"></div>
+      </section>
+      <section class="card">
+        <div class="hd"><h3>Documentos</h3><span class="mini" id="docCount">—</span></div>
+        <table class="tbl">
+          <thead><tr><th>Arquivo</th><th>Processo</th><th>Cliente</th><th>Tamanho</th><th>Enviado em</th><th></th></tr></thead>
+          <tbody id="tblDocumentosFull"><tr><td colspan="6">Carregando…</td></tr></tbody>
+        </table>
+      </section>
+    </main>
+
     <!-- ===== PRAZOS (lista completa) ===== -->
     <main class="content" id="viewPrazos" style="display:none">
       <section class="card" id="cardSugestoesPrazo" style="display:none">
@@ -563,6 +585,7 @@
   const periView = document.getElementById('viewPericias');
   const cliView = document.getElementById('viewClientes');
   const prazView = document.getElementById('viewPrazos');
+  const docView = document.getElementById('viewDocumentos');
   let _paginaAtiva = 'Dashboard';
   links.forEach(a=>a.addEventListener('click',e=>{
     e.preventDefault();
@@ -572,13 +595,14 @@
     _paginaAtiva = mod;
     dash.style.display='none'; empty.style.display='none'; procView.style.display='none';
     audView.style.display='none'; periView.style.display='none'; cliView.style.display='none';
-    prazView.style.display='none'; ctx.style.display='none';
+    prazView.style.display='none'; docView.style.display='none'; ctx.style.display='none';
     if(mod==='Dashboard'){ dash.style.display='block'; ctx.style.display='flex'; }
     else if(mod==='Processos'){ procView.style.display='block'; if(!window._processosCarregados) carregarProcessosPage(); }
     else if(mod==='Audiências'){ audView.style.display='block'; if(!window._audienciasCarregadas) carregarAudienciasPage(); }
     else if(mod==='Perícias'){ periView.style.display='block'; if(!window._periciasCarregadas) carregarPericiasPage(); }
     else if(mod==='Clientes'){ cliView.style.display='block'; if(!window._clientesCarregados) carregarClientesPage(); }
     else if(mod==='Prazos'){ prazView.style.display='block'; if(!window._prazosCarregados) carregarPrazosPage(); }
+    else if(mod==='Documentos'){ docView.style.display='block'; if(!window._documentosCarregados) carregarDocumentosPage(); }
     else { empty.style.display='flex'; emptyTitle.textContent = mod; }
     document.getElementById('side').classList.remove('open');
   }));
@@ -884,6 +908,97 @@
     }
   });
 
+  // ---- Documentos ----
+  let _todosDocumentos = [];
+  const LIMITE_UPLOAD_MB = 25;
+
+  async function carregarDocumentosPage() {
+    window._documentosCarregados = true;
+    const [documentos, processos, clientes] = await Promise.all([apiGet('documentos'), apiGet('processos'), apiGet('clientes')]);
+    const nomeCliente = {}; clientes.forEach(c => nomeCliente[c.cliente_id] = c.nome);
+    const procInfo = {}; processos.forEach(p => procInfo[p.processo_id] = { numero: p.numero_processo, cliente: nomeCliente[p.cliente_id] || '—' });
+
+    _todosDocumentos = documentos.slice().sort((a,b) => (b.criado_em||'').localeCompare(a.criado_em||''))
+      .map(d => Object.assign({}, d, { numero: (procInfo[d.processo_id]||{}).numero || '—', clienteNome: (procInfo[d.processo_id]||{}).cliente || '—' }));
+    document.getElementById('docCount').textContent = documentos.length + ' arquivo(s)';
+    renderDocumentosTabela(_todosDocumentos);
+
+    const select = document.getElementById('docProcessoSelect');
+    select.innerHTML = '<option value="">Selecione o processo…</option>' +
+      processos.map(p => `<option value="${p.processo_id}">${p.numero_processo} — ${nomeCliente[p.cliente_id] || '—'}</option>`).join('');
+  }
+
+  function formatarTamanho(bytes) {
+    bytes = Number(bytes) || 0;
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024*1024) return (bytes/1024).toFixed(0) + ' KB';
+    return (bytes/(1024*1024)).toFixed(1) + ' MB';
+  }
+
+  function renderDocumentosTabela(lista) {
+    const tbody = document.getElementById('tblDocumentosFull');
+    tbody.innerHTML = lista.length ? lista.map(d => {
+      const dataFmt = (d.criado_em || '').slice(0,10).split('-').reverse().join('/');
+      return `
+        <tr>
+          <td><a href="${d.url}" target="_blank" rel="noopener">${d.nome_arquivo}</a></td>
+          <td class="proc">${d.numero}</td>
+          <td>${d.clienteNome}</td>
+          <td>${formatarTamanho(d.tamanho_bytes)}</td>
+          <td>${dataFmt || '—'}</td>
+          <td><button class="btnExcluirDoc" data-id="${d.documento_id}" style="background:transparent;color:var(--danger);border:1px solid var(--line);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">Excluir</button></td>
+        </tr>`;
+    }).join('') : '<tr><td colspan="6">Nenhum documento enviado ainda</td></tr>';
+  }
+
+  function fileParaBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  document.getElementById('btnEnviarDocumento').addEventListener('click', async () => {
+    const processoId = document.getElementById('docProcessoSelect').value;
+    const fileInput = document.getElementById('docFileInput');
+    const status = document.getElementById('docUploadStatus');
+    const file = fileInput.files[0];
+
+    if (!processoId) { status.textContent = 'Selecione um processo antes de enviar.'; status.style.color = 'var(--danger)'; return; }
+    if (!file) { status.textContent = 'Escolha um arquivo.'; status.style.color = 'var(--danger)'; return; }
+    if (file.size > LIMITE_UPLOAD_MB * 1024 * 1024) {
+      status.textContent = `Arquivo muito grande (máx. ${LIMITE_UPLOAD_MB} MB).`; status.style.color = 'var(--danger)'; return;
+    }
+
+    status.textContent = 'Enviando…'; status.style.color = 'var(--tx-muted)';
+    try {
+      const base64 = await fileParaBase64(file);
+      const resultado = await apiPost('uploadDocumento', {
+        processo_id: processoId, nome_arquivo: file.name, mime_type: file.type, conteudo_base64: base64
+      });
+      if (resultado.ok) {
+        status.textContent = 'Enviado com sucesso.'; status.style.color = 'var(--ok)';
+        fileInput.value = '';
+        carregarDocumentosPage();
+      } else {
+        status.textContent = 'Erro: ' + (resultado.erro || 'falha desconhecida'); status.style.color = 'var(--danger)';
+      }
+    } catch (err) {
+      status.textContent = 'Erro ao enviar: ' + err.message; status.style.color = 'var(--danger)';
+    }
+  });
+
+  document.addEventListener('click', async e => {
+    if (e.target.classList.contains('btnExcluirDoc')) {
+      if (!confirm('Excluir este documento? Essa ação não pode ser desfeita.')) return;
+      e.target.disabled = true; e.target.textContent = '...';
+      await apiPost('excluirDocumento', { documento_id: e.target.dataset.id });
+      carregarDocumentosPage();
+    }
+  });
+
   // ===== Busca única no topo — filtra a página que estiver aberta =====
   document.querySelector('.search input').addEventListener('input', e => {
     const termo = e.target.value.toLowerCase();
@@ -896,6 +1011,8 @@
       (c.nome||'').toLowerCase().includes(termo)));
     else if (_paginaAtiva === 'Prazos') renderPrazosTabela(_todosPrazos.filter(t =>
       t.numero.toLowerCase().includes(termo) || t.clienteNome.toLowerCase().includes(termo) || (t.tipo||'').toLowerCase().includes(termo)));
+    else if (_paginaAtiva === 'Documentos') renderDocumentosTabela(_todosDocumentos.filter(d =>
+      (d.nome_arquivo||'').toLowerCase().includes(termo) || d.numero.toLowerCase().includes(termo) || d.clienteNome.toLowerCase().includes(termo)));
   });
 </script>
 </body>
