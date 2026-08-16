@@ -603,16 +603,26 @@
 
   // ===== Modal genérico de edição (Prazos, Processos, Audiências) =====
   let _modalAoSalvar = null;
+  function valoresUnicos(lista, campo) {
+    return Array.from(new Set(lista.map(x => String(x[campo] || '').trim()).filter(Boolean))).sort();
+  }
   function abrirModal(titulo, campos, valores, aoSalvar) {
     document.getElementById('modalTitulo').textContent = titulo;
     const body = document.getElementById('modalCampos');
     body.innerHTML = campos.map(c => {
       const valorAtual = (valores[c.key] !== undefined && valores[c.key] !== null) ? valores[c.key] : '';
+      const valorEscapado = String(valorAtual).replace(/"/g, '&quot;');
       if (c.type === 'select') {
         return `<div><label>${c.label}</label><select id="campo_${c.key}">${c.opcoes.map(o =>
           `<option value="${o.value}" ${valorAtual === o.value ? 'selected' : ''}>${o.label}</option>`).join('')}</select></div>`;
       }
-      const valorEscapado = String(valorAtual).replace(/"/g, '&quot;');
+      if (c.type === 'datalist') {
+        const listId = 'dl_' + c.key;
+        return `<div><label>${c.label}</label>
+          <input id="campo_${c.key}" list="${listId}" autocomplete="off" value="${valorEscapado}" placeholder="Selecione ou digite um novo…">
+          <datalist id="${listId}">${(c.opcoes || []).map(o => `<option value="${String(o).replace(/"/g,'&quot;')}">`).join('')}</datalist>
+        </div>`;
+      }
       return `<div><label>${c.label}</label><input id="campo_${c.key}" type="${c.type || 'text'}" value="${valorEscapado}"></div>`;
     }).join('');
     _modalAoSalvar = aoSalvar;
@@ -1109,7 +1119,7 @@
       if (!p) return;
       const valores = Object.assign({}, p, { data_vencimento: String(p.data_vencimento || '').slice(0, 10) });
       abrirModal('Editar prazo', [
-        { key: 'tipo', label: 'Tipo' },
+        { key: 'tipo', label: 'Tipo', type: 'datalist', opcoes: valoresUnicos(_todosPrazos, 'tipo') },
         { key: 'data_vencimento', label: 'Vencimento', type: 'date' }
       ], valores, async novos => {
         await apiPost('atualizarPrazo', Object.assign({ prazo_id: p.prazo_id }, novos));
@@ -1129,10 +1139,10 @@
       if (!p) return;
       abrirModal('Editar processo — ' + (p.numero_processo || ''), [
         { key: 'parte_contraria', label: 'Parte contrária' },
-        { key: 'tribunal', label: 'Tribunal' },
-        { key: 'sistema_judicial', label: 'Sistema judicial' },
-        { key: 'vara', label: 'Vara' },
-        { key: 'classe_acao', label: 'Classe da ação' },
+        { key: 'tribunal', label: 'Tribunal', type: 'datalist', opcoes: valoresUnicos(_todosProcessos, 'tribunal') },
+        { key: 'sistema_judicial', label: 'Sistema judicial', type: 'datalist', opcoes: valoresUnicos(_todosProcessos, 'sistema_judicial') },
+        { key: 'vara', label: 'Vara', type: 'datalist', opcoes: valoresUnicos(_todosProcessos, 'vara') },
+        { key: 'classe_acao', label: 'Classe da ação', type: 'datalist', opcoes: valoresUnicos(_todosProcessos, 'classe_acao') },
         { key: 'status', label: 'Status', type: 'select', opcoes: [
           { value: 'ativo', label: 'Ativo' }, { value: 'suspenso', label: 'Suspenso' },
           { value: 'arquivado', label: 'Arquivado' }, { value: 'encerrado', label: 'Encerrado' }
@@ -1148,14 +1158,17 @@
       const a = _todasAudiencias.find(x => x.audiencia_id === e.target.dataset.id);
       if (!a) return;
       const dataNormalizada = /^\d{4}-\d{2}-\d{2}/.test(a.data || '') ? String(a.data).slice(0, 10) : '';
-      const valores = Object.assign({}, a, { data: dataNormalizada });
+      const horaMatch = String(a.horario || '').match(/(\d{1,2}):(\d{2})/);
+      const horarioNormalizado = horaMatch ? horaMatch[1].padStart(2, '0') + ':' + horaMatch[2] : '';
+      const varasCombinadas = valoresUnicos(_todasAudiencias.concat(_todosProcessos), 'vara');
+      const valores = Object.assign({}, a, { data: dataNormalizada, horario: horarioNormalizado });
       abrirModal('Editar audiência', [
         { key: 'data', label: 'Data', type: 'date' },
-        { key: 'horario', label: 'Horário' },
-        { key: 'modalidade', label: 'Modalidade' },
-        { key: 'tipo', label: 'Tipo' },
-        { key: 'vara', label: 'Vara' },
-        { key: 'advogado', label: 'Advogado(a) responsável' }
+        { key: 'horario', label: 'Horário', type: 'time' },
+        { key: 'modalidade', label: 'Modalidade', type: 'datalist', opcoes: valoresUnicos(_todasAudiencias, 'modalidade') },
+        { key: 'tipo', label: 'Tipo', type: 'datalist', opcoes: valoresUnicos(_todasAudiencias, 'tipo') },
+        { key: 'vara', label: 'Vara', type: 'datalist', opcoes: varasCombinadas },
+        { key: 'advogado', label: 'Advogado(a) responsável', type: 'datalist', opcoes: valoresUnicos(_todasAudiencias, 'advogado') }
       ], valores, async novos => {
         await apiPost('atualizarAudiencia', Object.assign({ audiencia_id: a.audiencia_id }, novos));
         carregarAudienciasPage(); carregarDashboard();
