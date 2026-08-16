@@ -28,6 +28,11 @@
     --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
   }
+  /* ===== Paletas alternativas do conteúdo (sidebar não muda) ===== */
+  body[data-theme="rosa"]{ --app:#fdf1f6; --surface:#fffbfd; --line:#f6dce8; --line-2:#faeaf1; --tx:#3a1626; --tx-muted:#8a5567; }
+  body[data-theme="azul"]{ --app:#eef6fc; --surface:#ffffff; --line:#d9e8f5; --line-2:#e8f2fa; --tx:#122a3d; --tx-muted:#5c7891; }
+  body[data-theme="verde"]{ --app:#eef8f1; --surface:#ffffff; --line:#d7ecdd; --line-2:#e7f4ea; --tx:#12301c; --tx-muted:#5a7d64; }
+  body[data-theme="cinza"]{ --app:#f1f2f4; --surface:#ffffff; --line:#dde0e4; --line-2:#e9ebee; --tx:#1c1f24; --tx-muted:#6b7280; }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%}
   body{background:var(--app);color:var(--tx);font:15px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
@@ -62,7 +67,7 @@
   .nav a .badge{margin-left:auto;background:var(--danger);color:#fff;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:10px}
 
   .side .who{margin:12px;padding:12px;border-radius:11px;background:rgba(255,255,255,.04);display:flex;align-items:center;gap:10px}
-  .side .who .av{width:34px;height:34px;border-radius:9px;background:var(--brass);color:var(--ink);display:grid;place-items:center;font-weight:700;font-family:var(--serif);font-size:15px;flex:none}
+  .side .who .av{width:52px;height:52px;border-radius:12px;background:var(--brass);color:var(--ink);display:grid;place-items:center;font-weight:700;font-family:var(--serif);font-size:15px;flex:none}
   .side .who .nm{font-size:12.5px;color:#e8edf3;font-weight:600;line-height:1.2}
   .side .who .rl{font-size:11px;color:#8b96a8}
 
@@ -78,6 +83,16 @@
   .search{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-width:230px;color:var(--tx-muted)}
   .search svg{width:16px;height:16px;stroke:currentColor;stroke-width:1.8;fill:none}
   .search input{border:0;outline:0;background:none;font:inherit;font-size:13px;color:var(--tx);width:100%}
+
+  .theme-picker{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+  .theme-picker .lbl{font-size:11px;color:var(--tx-muted);margin-right:2px}
+  .theme-swatch{width:20px;height:20px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;flex:none}
+  .theme-swatch.active{border-color:var(--ink)}
+  .theme-swatch[data-theme="padrao"]{background:linear-gradient(135deg,#f4f6f9 50%,#ffffff 50%)}
+  .theme-swatch[data-theme="rosa"]{background:#fdf1f6}
+  .theme-swatch[data-theme="azul"]{background:#eef6fc}
+  .theme-swatch[data-theme="verde"]{background:#eef8f1}
+  .theme-swatch[data-theme="cinza"]{background:#f1f2f4}
 
   /* barra de contexto inteligente */
   .ctx{display:flex;gap:22px;flex-wrap:wrap;padding:11px 30px;border-bottom:1px solid var(--line);background:var(--surface)}
@@ -253,12 +268,22 @@
           <button class="menu-btn" id="menuBtn" aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
           <div>
             <div class="hi" id="hiTitle">Boa tarde, Dra. Letícia</div>
-            <div class="date">Sexta-feira, 8 de agosto de 2026</div>
+            <div class="date" id="hiDate">Sexta-feira, 8 de agosto de 2026</div>
           </div>
         </div>
-        <div class="search">
-          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-          <input placeholder="Buscar processo, cliente ou nº…">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="theme-picker" id="themePicker" title="Cor de fundo do sistema">
+            <span class="lbl">Tema</span>
+            <button class="theme-swatch" data-theme="padrao" title="Padrão"></button>
+            <button class="theme-swatch" data-theme="rosa" title="Rosa claro"></button>
+            <button class="theme-swatch" data-theme="azul" title="Azul claro"></button>
+            <button class="theme-swatch" data-theme="verde" title="Verde claro"></button>
+            <button class="theme-swatch" data-theme="cinza" title="Cinza claro"></button>
+          </div>
+          <div class="search">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input placeholder="Buscar processo, cliente ou nº…">
+          </div>
         </div>
       </div>
     </div>
@@ -501,6 +526,31 @@
     const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(body) });
     return res.json();
   }
+
+  // ===== Saudação e data reais (não mais fixas) =====
+  (function atualizarSaudacaoEData(){
+    const agora = new Date();
+    const hora = agora.getHours();
+    const saudacao = hora < 12 ? 'Bom dia' : (hora < 18 ? 'Boa tarde' : 'Boa noite');
+    document.getElementById('hiTitle').textContent = saudacao + ', Dra. Letícia';
+    const dias = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+    const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    document.getElementById('hiDate').textContent =
+      `${dias[agora.getDay()]}, ${agora.getDate()} de ${meses[agora.getMonth()]} de ${agora.getFullYear()}`;
+  })();
+
+  // ===== Tema de cores (só a área de conteúdo — sidebar fica sempre igual) =====
+  (function configurarSeletorDeTema(){
+    const swatches = document.querySelectorAll('.theme-swatch');
+    function aplicarTema(tema){
+      if (tema && tema !== 'padrao') document.body.setAttribute('data-theme', tema);
+      else document.body.removeAttribute('data-theme');
+      swatches.forEach(s => s.classList.toggle('active', (s.dataset.theme === tema) || (!tema && s.dataset.theme === 'padrao')));
+      localStorage.setItem('jurisrl_tema', tema || 'padrao');
+    }
+    swatches.forEach(s => s.addEventListener('click', () => aplicarTema(s.dataset.theme)));
+    aplicarTema(localStorage.getItem('jurisrl_tema') || 'padrao');
+  })();
 
   // navegação (protótipo): troca o "ativo" e mostra painel ou empty state
   const links = document.querySelectorAll('.nav a');
