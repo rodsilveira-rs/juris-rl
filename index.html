@@ -301,19 +301,13 @@
           <section class="card">
             <div class="hd"><h3>Radar de prazos</h3><span class="mini">próximos 14 dias</span></div>
             <div class="radar">
-              <div class="scale">
+              <div class="scale" id="radarScale">
                 <span class="now"></span>
                 <span class="tick" style="left:2%">Hoje<i></i></span>
                 <span class="tick" style="left:26%">+3d<i></i></span>
                 <span class="tick" style="left:50%">+7d<i></i></span>
                 <span class="tick" style="left:74%">+10d<i></i></span>
                 <span class="tick" style="left:98%">+14d<i></i></span>
-                <span class="pin d" style="left:8%"  title="Contestação · vence amanhã"></span>
-                <span class="pin d" style="left:14%" title="Réplica · vence em 2 dias"></span>
-                <span class="pin w" style="left:30%" title="Recurso · vence em 4 dias"></span>
-                <span class="pin w" style="left:44%" title="Manifestação · vence em 6 dias"></span>
-                <span class="pin o" style="left:66%" title="Cumprimento · vence em 9 dias"></span>
-                <span class="pin o" style="left:90%" title="Embargos · vence em 13 dias"></span>
               </div>
               <div class="legend">
                 <span><span class="pin d" style="position:static;width:10px;height:10px;border:0;box-shadow:none"></span>Crítico (≤48h)</span>
@@ -321,11 +315,8 @@
                 <span><span class="pin o" style="position:static;width:10px;height:10px;border:0;box-shadow:none"></span>No prazo</span>
               </div>
             </div>
-            <div class="plist">
-              <div class="prow"><span class="flag d"></span><div class="info"><div class="t">Contestação — Comércio Aurora Ltda × Banco Meridional</div><div class="m">PJe · 5ª Vara Cível · resp. Dra. Letícia</div></div><div class="due"><div class="n d">amanhã</div><div class="s">09/08</div></div></div>
-              <div class="prow"><span class="flag d"></span><div class="info"><div class="t">Réplica — Construtora Vale Verde × Município de Serra</div><div class="m">e-SAJ · 2ª Vara Fazenda</div></div><div class="due"><div class="n d">2 dias</div><div class="s">10/08</div></div></div>
-              <div class="prow"><span class="flag w"></span><div class="info"><div class="t">Recurso Inominado — M. R. Souza × Telecom Brasil S.A.</div><div class="m">Portal TJRJ · Juizado Especial</div></div><div class="due"><div class="n w">4 dias</div><div class="s">12/08</div></div></div>
-              <div class="prow"><span class="flag o"></span><div class="info"><div class="t">Cumprimento de sentença — Espólio Castro × Seguradora Ápice</div><div class="m">e-SAJ · 1ª Vara Cível</div></div><div class="due"><div class="n o">9 dias</div><div class="s">17/08</div></div></div>
+            <div class="plist" id="radarPlist">
+              <div class="prow"><div class="info"><div class="t">Carregando…</div></div></div>
             </div>
           </section>
 
@@ -428,10 +419,17 @@
 
     <!-- ===== PRAZOS (lista completa) ===== -->
     <main class="content" id="viewPrazos" style="display:none">
+      <section class="card" id="cardSugestoesPrazo" style="display:none">
+        <div class="hd"><h3>Sugestões aguardando confirmação</h3><span class="mini" id="sugestoesCount">—</span></div>
+        <table class="tbl">
+          <thead><tr><th>Vencimento (sugerido)</th><th>Tipo</th><th>Processo</th><th>Cliente</th><th>Trecho identificado</th><th></th></tr></thead>
+          <tbody id="tblSugestoesFull"></tbody>
+        </table>
+      </section>
       <section class="card">
         <div class="hd"><h3>Prazos</h3><span class="mini" id="prazosCount">—</span></div>
         <table class="tbl">
-          <thead><tr><th>Vencimento</th><th>Tarefa</th><th>Processo</th><th>Cliente</th><th>Responsável</th><th>Status</th></tr></thead>
+          <thead><tr><th>Vencimento</th><th>Tipo</th><th>Processo</th><th>Cliente</th><th>Origem</th><th>Status</th></tr></thead>
           <tbody id="tblPrazosFull"><tr><td colspan="6">Carregando…</td></tr></tbody>
         </table>
       </section>
@@ -498,6 +496,12 @@
     return res.json();
   }
 
+  async function apiPost(action, dados) {
+    const body = Object.assign({ action, token: API_TOKEN }, dados);
+    const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(body) });
+    return res.json();
+  }
+
   // navegação (protótipo): troca o "ativo" e mostra painel ou empty state
   const links = document.querySelectorAll('.nav a');
   const dash = document.getElementById('viewDashboard');
@@ -534,8 +538,8 @@
   // ===== Carregar dados reais =====
  async function carregarDashboard() {
     try {
-      const [processos, audiencias, movs, tarefas] = await Promise.all([
-        apiGet('processos'), apiGet('audiencias'), apiGet('movimentacoes'), apiGet('tarefas')
+      const [processos, audiencias, movs, clientes, prazos] = await Promise.all([
+        apiGet('processos'), apiGet('audiencias'), apiGet('movimentacoes'), apiGet('clientes'), apiGet('prazos')
       ]);
 
       document.getElementById('kpiProcessos').textContent = processos.length;
@@ -547,13 +551,60 @@
       const hojeISO = new Date().toISOString().slice(0, 10);
       const em7ISO = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
       const em2ISO = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
-      const abertosComData = tarefas.filter(t => t.status === 'aberto' && isoDate(t.data_limite));
-      const prazos7d = abertosComData.filter(t => t.data_limite <= em7ISO);
-      const criticos48h = abertosComData.filter(t => t.data_limite <= em2ISO);
+      const em14ISO = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+
+      const nomeCliente = {}; clientes.forEach(c => nomeCliente[c.cliente_id] = c.nome);
+      const procInfoPrazo = {}; processos.forEach(p => procInfoPrazo[p.processo_id] = { numero: p.numero_processo, cliente: nomeCliente[p.cliente_id] || '—', vara: p.vara || '' });
+
+      const prazosAbertos = prazos.filter(p => p.status === 'aberto' && isoDate(p.data_vencimento));
+      const prazos7d = prazosAbertos.filter(p => p.data_vencimento <= em7ISO);
+      const criticos48h = prazosAbertos.filter(p => p.data_vencimento <= em2ISO);
       document.getElementById('kpiPrazos7d').textContent = prazos7d.length;
       document.getElementById('kpiPrazosCriticos').textContent = criticos48h.length + ' críticos ≤48h';
       document.getElementById('prazoBadge').textContent = prazos7d.length;
       document.getElementById('ctxPrazos').textContent = prazos7d.length;
+
+      // ---- Radar de Prazos (pins no timeline + lista, próximos 14 dias) ----
+      const scale = document.getElementById('radarScale');
+      scale.querySelectorAll('.pin').forEach(p => p.remove());
+      const radarPlist = document.getElementById('radarPlist');
+      const proximos14d = prazosAbertos.filter(p => p.data_vencimento <= em14ISO)
+        .sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento));
+
+      function diasRestantes(dataISO) {
+        return Math.round((new Date(dataISO + 'T00:00:00') - new Date(hojeISO + 'T00:00:00')) / 86400000);
+      }
+      function corPrazo(dias) {
+        return dias <= 2 ? 'd' : (dias <= 6 ? 'w' : 'o');
+      }
+
+      proximos14d.forEach(p => {
+        const dias = Math.max(diasRestantes(p.data_vencimento), 0);
+        const pct = Math.min(2 + (dias / 14) * 96, 98);
+        const pin = document.createElement('span');
+        pin.className = 'pin ' + corPrazo(dias);
+        pin.style.left = pct + '%';
+        const info = procInfoPrazo[p.processo_id] || {};
+        pin.title = `${p.tipo || 'Prazo'} · ${info.cliente || '—'} · vence em ${dias} dia(s)`;
+        scale.appendChild(pin);
+      });
+
+      radarPlist.innerHTML = proximos14d.length ? proximos14d.slice(0, 6).map(p => {
+        const dias = Math.max(diasRestantes(p.data_vencimento), 0);
+        const cor = corPrazo(dias);
+        const info = procInfoPrazo[p.processo_id] || {};
+        const [y, m, d] = p.data_vencimento.split('-');
+        const rotulo = dias === 0 ? 'hoje' : (dias === 1 ? 'amanhã' : dias + ' dias');
+        return `
+          <div class="prow">
+            <span class="flag ${cor}"></span>
+            <div class="info">
+              <div class="t">${p.tipo || 'Prazo'} — ${info.cliente || '—'}</div>
+              <div class="m">${info.numero || '—'} · ${info.vara || ''}</div>
+            </div>
+            <div class="due"><div class="n ${cor}">${rotulo}</div><div class="s">${d}/${m}</div></div>
+          </div>`;
+      }).join('') : '<div class="prow"><div class="info"><div class="t">Nenhum prazo confirmado nos próximos 14 dias</div></div></div>';
 
       const tbody = document.getElementById('tblMovimentacoes');
       const clientesPorProcesso = {};
@@ -717,33 +768,71 @@
   }
 
   // ---- Prazos ----
+  let _sugestoesPrazo = [];
   async function carregarPrazosPage() {
     window._prazosCarregados = true;
-    const [tarefas, processos, clientes] = await Promise.all([apiGet('tarefas'), apiGet('processos'), apiGet('clientes')]);
+    const [prazos, processos, clientes] = await Promise.all([apiGet('prazos'), apiGet('processos'), apiGet('clientes')]);
     const nomeCliente = {}; clientes.forEach(c => nomeCliente[c.cliente_id] = c.nome);
     const procInfo = {}; processos.forEach(p => procInfo[p.processo_id] = { numero: p.numero_processo, cliente: nomeCliente[p.cliente_id] || '—' });
     const isoDate = d => /^\d{4}-\d{2}-\d{2}/.test(d || '');
-    _todosPrazos = tarefas.filter(t => t.status === 'aberto' && isoDate(t.data_limite))
-      .sort((a, b) => a.data_limite.localeCompare(b.data_limite))
-      .map(t => Object.assign({}, t, { numero: (procInfo[t.processo_id]||{}).numero || '—', clienteNome: (procInfo[t.processo_id]||{}).cliente || '—' }));
-    document.getElementById('prazosCount').textContent = _todosPrazos.length + ' em aberto';
+    const comInfo = p => Object.assign({}, p, { numero: (procInfo[p.processo_id]||{}).numero || '—', clienteNome: (procInfo[p.processo_id]||{}).cliente || '—' });
+
+    _todosPrazos = prazos.filter(p => p.status === 'aberto' && isoDate(p.data_vencimento))
+      .sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento)).map(comInfo);
+    _sugestoesPrazo = prazos.filter(p => p.status === 'sugerido').map(comInfo);
+
+    document.getElementById('prazosCount').textContent = _todosPrazos.length + ' confirmado(s)';
     renderPrazosTabela(_todosPrazos);
+    renderSugestoesTabela();
   }
   function renderPrazosTabela(lista) {
     const tbody = document.getElementById('tblPrazosFull');
-    tbody.innerHTML = lista.length ? lista.map(t => {
-      const dataFmt = t.data_limite.slice(0, 10).split('-').reverse().join('/');
+    tbody.innerHTML = lista.length ? lista.map(p => {
+      const dataFmt = p.data_vencimento.slice(0, 10).split('-').reverse().join('/');
       return `
         <tr>
           <td>${dataFmt}</td>
-          <td>${t.tipo || '—'}</td>
-          <td class="proc">${t.numero}</td>
-          <td>${t.clienteNome}</td>
-          <td>${t.responsavel_id || '—'}</td>
-          <td><span class="st s">Aberto</span></td>
+          <td>${p.tipo || '—'}</td>
+          <td class="proc">${p.numero}</td>
+          <td>${p.clienteNome}</td>
+          <td>${p.origem || '—'}</td>
+          <td><span class="st a">Confirmado</span></td>
         </tr>`;
-    }).join('') : '<tr><td colspan="6">Nenhum prazo em aberto</td></tr>';
+    }).join('') : '<tr><td colspan="6">Nenhum prazo confirmado</td></tr>';
   }
+  function renderSugestoesTabela() {
+    const card = document.getElementById('cardSugestoesPrazo');
+    const tbody = document.getElementById('tblSugestoesFull');
+    if (!_sugestoesPrazo.length) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
+    document.getElementById('sugestoesCount').textContent = _sugestoesPrazo.length + ' pendente(s)';
+    tbody.innerHTML = _sugestoesPrazo.map(p => {
+      const dataFmt = (p.data_vencimento || '').slice(0, 10).split('-').reverse().join('/');
+      return `
+        <tr>
+          <td>${dataFmt || '—'}</td>
+          <td>${p.tipo || '—'}</td>
+          <td class="proc">${p.numero}</td>
+          <td>${p.clienteNome}</td>
+          <td style="max-width:280px;font-size:12px;color:var(--tx-muted)">${(p.descricao||'').slice(0,140)}</td>
+          <td style="white-space:nowrap">
+            <button class="btnConfirmarPrazo" data-id="${p.prazo_id}" style="background:var(--ok);color:#fff;border:0;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;margin-right:6px">Confirmar</button>
+            <button class="btnRejeitarPrazo" data-id="${p.prazo_id}" style="background:transparent;color:var(--tx-muted);border:1px solid var(--line);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">Descartar</button>
+          </td>
+        </tr>`;
+    }).join('');
+  }
+  document.addEventListener('click', async e => {
+    if (e.target.classList.contains('btnConfirmarPrazo')) {
+      e.target.disabled = true; e.target.textContent = '...';
+      await apiPost('confirmarPrazo', { prazo_id: e.target.dataset.id });
+      carregarPrazosPage(); carregarDashboard();
+    } else if (e.target.classList.contains('btnRejeitarPrazo')) {
+      e.target.disabled = true; e.target.textContent = '...';
+      await apiPost('rejeitarPrazo', { prazo_id: e.target.dataset.id });
+      carregarPrazosPage();
+    }
+  });
 
   // ===== Busca única no topo — filtra a página que estiver aberta =====
   document.querySelector('.search input').addEventListener('input', e => {
