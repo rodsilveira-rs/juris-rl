@@ -99,6 +99,22 @@
   .theme-swatch[data-theme="amarelo"]{background:#fdf3d0}
   .theme-swatch[data-theme="bege"]{background:#f2e6d0}
 
+  /* modal genérico de edição (usado por Prazos, Processos, Audiências) */
+  .modal-overlay{position:fixed;inset:0;background:rgba(15,27,45,.45);display:none;align-items:center;justify-content:center;z-index:500}
+  .modal-overlay.open{display:flex}
+  .modal-box{background:var(--surface);border-radius:var(--radius);width:420px;max-width:92vw;box-shadow:var(--shadow);overflow:hidden}
+  .modal-hd{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--line)}
+  .modal-hd h3{margin:0;font-family:var(--serif);font-size:17px;color:var(--ink)}
+  .modal-close{background:none;border:0;font-size:20px;color:var(--tx-muted);cursor:pointer;line-height:1}
+  .modal-body{padding:16px 18px;display:flex;flex-direction:column;gap:12px;max-height:60vh;overflow:auto}
+  .modal-body label{font-size:12px;color:var(--tx-muted);display:block;margin-bottom:4px}
+  .modal-body input,.modal-body select{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;font-size:13px;box-sizing:border-box}
+  .modal-ft{display:flex;justify-content:flex-end;gap:8px;padding:14px 18px;border-top:1px solid var(--line)}
+  .btn-primario{background:var(--ink);color:#fff;border:0;border-radius:8px;padding:9px 16px;font:inherit;font-size:13px;cursor:pointer}
+  .btn-secundario{background:transparent;color:var(--tx-muted);border:1px solid var(--line);border-radius:8px;padding:9px 16px;font:inherit;font-size:13px;cursor:pointer}
+  .btn-acao{background:transparent;color:var(--tx-muted);border:1px solid var(--line);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;margin-right:6px}
+  .btn-acao.perigo{color:var(--danger)}
+
   /* barra de upload estilo "aurora" — usa as cores do tema ativo */
   .upload-progress{display:none;margin-top:10px}
   .upload-progress .track{height:8px;border-radius:6px;overflow:hidden;background:var(--line);position:relative}
@@ -421,7 +437,7 @@
           </div>
         </div>
         <table class="tbl">
-          <thead><tr><th>Nº Processo</th><th>Cliente</th><th>Parte contrária</th><th>Tribunal</th><th>Vara</th><th>Status</th></tr></thead>
+          <thead><tr><th>Nº Processo</th><th>Cliente</th><th>Parte contrária</th><th>Tribunal</th><th>Vara</th><th>Status</th><th></th></tr></thead>
           <tbody id="tblProcessosFull"><tr><td colspan="6">Carregando…</td></tr></tbody>
         </table>
       </section>
@@ -432,7 +448,7 @@
       <section class="card">
         <div class="hd"><h3>Audiências</h3><span class="mini" id="audCount">—</span></div>
         <table class="tbl">
-          <thead><tr><th>Data</th><th>Horário</th><th>Processo</th><th>Cliente</th><th>Vara</th><th>Tipo</th><th>Advogado</th></tr></thead>
+          <thead><tr><th>Data</th><th>Horário</th><th>Processo</th><th>Cliente</th><th>Vara</th><th>Tipo</th><th>Advogado</th><th></th></tr></thead>
           <tbody id="tblAudienciasFull"><tr><td colspan="7">Carregando…</td></tr></tbody>
         </table>
       </section>
@@ -498,7 +514,7 @@
       <section class="card">
         <div class="hd"><h3>Prazos</h3><span class="mini" id="prazosCount">—</span></div>
         <table class="tbl">
-          <thead><tr><th>Vencimento</th><th>Tipo</th><th>Processo</th><th>Cliente</th><th>Origem</th><th>Status</th></tr></thead>
+          <thead><tr><th>Vencimento</th><th>Tipo</th><th>Processo</th><th>Cliente</th><th>Origem</th><th>Status</th><th></th></tr></thead>
           <tbody id="tblPrazosFull"><tr><td colspan="6">Carregando…</td></tr></tbody>
         </table>
       </section>
@@ -509,6 +525,20 @@
       <svg viewBox="0 0 48 48"><line x1="24" y1="14" x2="24" y2="36" stroke-width="2"/><line x1="12" y1="18" x2="36" y2="18" stroke-width="2"/><path d="M6 22 a6 6 0 0 0 12 0" stroke-width="2"/><path d="M30 22 a6 6 0 0 0 12 0" stroke-width="2"/></svg>
       <h3 id="emptyTitle">Módulo em construção</h3>
       <p>Este módulo faz parte do roadmap do Juris RL. Vamos construí-lo no chat dedicado — o painel já está no ar.</p>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <h3 id="modalTitulo">Editar</h3>
+      <button class="modal-close" id="modalFechar">×</button>
+    </div>
+    <div class="modal-body" id="modalCampos"></div>
+    <div class="modal-ft">
+      <button class="btn-secundario" id="modalCancelar">Cancelar</button>
+      <button class="btn-primario" id="modalSalvar">Salvar</button>
     </div>
   </div>
 </div>
@@ -570,6 +600,42 @@
     const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(body) });
     return res.json();
   }
+
+  // ===== Modal genérico de edição (Prazos, Processos, Audiências) =====
+  let _modalAoSalvar = null;
+  function abrirModal(titulo, campos, valores, aoSalvar) {
+    document.getElementById('modalTitulo').textContent = titulo;
+    const body = document.getElementById('modalCampos');
+    body.innerHTML = campos.map(c => {
+      const valorAtual = (valores[c.key] !== undefined && valores[c.key] !== null) ? valores[c.key] : '';
+      if (c.type === 'select') {
+        return `<div><label>${c.label}</label><select id="campo_${c.key}">${c.opcoes.map(o =>
+          `<option value="${o.value}" ${valorAtual === o.value ? 'selected' : ''}>${o.label}</option>`).join('')}</select></div>`;
+      }
+      const valorEscapado = String(valorAtual).replace(/"/g, '&quot;');
+      return `<div><label>${c.label}</label><input id="campo_${c.key}" type="${c.type || 'text'}" value="${valorEscapado}"></div>`;
+    }).join('');
+    _modalAoSalvar = aoSalvar;
+    document.getElementById('modalOverlay').classList.add('open');
+  }
+  function fecharModal() {
+    document.getElementById('modalOverlay').classList.remove('open');
+    _modalAoSalvar = null;
+  }
+  document.getElementById('modalFechar').addEventListener('click', fecharModal);
+  document.getElementById('modalCancelar').addEventListener('click', fecharModal);
+  document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target.id === 'modalOverlay') fecharModal(); });
+  document.getElementById('modalSalvar').addEventListener('click', async () => {
+    if (!_modalAoSalvar) return;
+    const inputs = document.querySelectorAll('#modalCampos [id^="campo_"]');
+    const novosValores = {};
+    inputs.forEach(el => novosValores[el.id.replace('campo_', '')] = el.value);
+    const botao = document.getElementById('modalSalvar');
+    botao.disabled = true; botao.textContent = 'Salvando…';
+    await _modalAoSalvar(novosValores);
+    botao.disabled = false; botao.textContent = 'Salvar';
+    fecharModal();
+  });
 
   // ===== Saudação e data reais (não mais fixas) =====
   (function atualizarSaudacaoEData(){
@@ -766,8 +832,9 @@
         <td>${p.tribunal || '—'}</td>
         <td>${p.vara || '—'}</td>
         <td><span class="st a">${p.status || 'ativo'}</span></td>
+        <td><button class="btn-acao btnEditarProcesso" data-id="${p.processo_id}">Editar</button></td>
       </tr>
-    `).join('') : '<tr><td colspan="6">Nenhum processo encontrado</td></tr>';
+    `).join('') : '<tr><td colspan="7">Nenhum processo encontrado</td></tr>';
   }
   function filtrarProcessos(termo) {
     const sel = document.getElementById('filtroStatusProcesso');
@@ -809,8 +876,9 @@
           <td>${a.vara || '—'}</td>
           <td>${a.tipo || '—'}</td>
           <td>${a.advogado || '—'}</td>
+          <td><button class="btn-acao btnEditarAudiencia" data-id="${a.audiencia_id}">Editar</button></td>
         </tr>`;
-    }).join('') : '<tr><td colspan="7">Nenhuma audiência encontrada</td></tr>';
+    }).join('') : '<tr><td colspan="8">Nenhuma audiência encontrada</td></tr>';
   }
 
   // ---- Perícias ----
@@ -893,8 +961,12 @@
           <td>${p.clienteNome}</td>
           <td>${p.origem || '—'}</td>
           <td><span class="st a">Confirmado</span></td>
+          <td>
+            <button class="btn-acao btnEditarPrazo" data-id="${p.prazo_id}">Editar</button>
+            <button class="btn-acao perigo btnExcluirPrazoConfirmado" data-id="${p.prazo_id}">Excluir</button>
+          </td>
         </tr>`;
-    }).join('') : '<tr><td colspan="6">Nenhum prazo confirmado</td></tr>';
+    }).join('') : '<tr><td colspan="7">Nenhum prazo confirmado</td></tr>';
   }
   function renderSugestoesTabela() {
     const card = document.getElementById('cardSugestoesPrazo');
@@ -1029,6 +1101,65 @@
       e.target.disabled = true; e.target.textContent = '...';
       await apiPost('excluirDocumento', { documento_id: e.target.dataset.id });
       carregarDocumentosPage();
+    }
+
+    // ---- Editar / excluir prazo confirmado ----
+    else if (e.target.classList.contains('btnEditarPrazo')) {
+      const p = _todosPrazos.find(x => x.prazo_id === e.target.dataset.id);
+      if (!p) return;
+      const valores = Object.assign({}, p, { data_vencimento: String(p.data_vencimento || '').slice(0, 10) });
+      abrirModal('Editar prazo', [
+        { key: 'tipo', label: 'Tipo' },
+        { key: 'data_vencimento', label: 'Vencimento', type: 'date' }
+      ], valores, async novos => {
+        await apiPost('atualizarPrazo', Object.assign({ prazo_id: p.prazo_id }, novos));
+        carregarPrazosPage(); carregarDashboard();
+      });
+    }
+    else if (e.target.classList.contains('btnExcluirPrazoConfirmado')) {
+      if (!confirm('Excluir este prazo confirmado? Essa ação não pode ser desfeita.')) return;
+      e.target.disabled = true; e.target.textContent = '...';
+      await apiPost('excluirPrazo', { prazo_id: e.target.dataset.id });
+      carregarPrazosPage(); carregarDashboard();
+    }
+
+    // ---- Editar processo ----
+    else if (e.target.classList.contains('btnEditarProcesso')) {
+      const p = _todosProcessos.find(x => x.processo_id === e.target.dataset.id);
+      if (!p) return;
+      abrirModal('Editar processo — ' + (p.numero_processo || ''), [
+        { key: 'parte_contraria', label: 'Parte contrária' },
+        { key: 'tribunal', label: 'Tribunal' },
+        { key: 'sistema_judicial', label: 'Sistema judicial' },
+        { key: 'vara', label: 'Vara' },
+        { key: 'classe_acao', label: 'Classe da ação' },
+        { key: 'status', label: 'Status', type: 'select', opcoes: [
+          { value: 'ativo', label: 'Ativo' }, { value: 'suspenso', label: 'Suspenso' },
+          { value: 'arquivado', label: 'Arquivado' }, { value: 'encerrado', label: 'Encerrado' }
+        ]}
+      ], p, async novos => {
+        await apiPost('atualizarProcesso', Object.assign({ processo_id: p.processo_id }, novos));
+        carregarProcessosPage();
+      });
+    }
+
+    // ---- Editar audiência ----
+    else if (e.target.classList.contains('btnEditarAudiencia')) {
+      const a = _todasAudiencias.find(x => x.audiencia_id === e.target.dataset.id);
+      if (!a) return;
+      const dataNormalizada = /^\d{4}-\d{2}-\d{2}/.test(a.data || '') ? String(a.data).slice(0, 10) : '';
+      const valores = Object.assign({}, a, { data: dataNormalizada });
+      abrirModal('Editar audiência', [
+        { key: 'data', label: 'Data', type: 'date' },
+        { key: 'horario', label: 'Horário' },
+        { key: 'modalidade', label: 'Modalidade' },
+        { key: 'tipo', label: 'Tipo' },
+        { key: 'vara', label: 'Vara' },
+        { key: 'advogado', label: 'Advogado(a) responsável' }
+      ], valores, async novos => {
+        await apiPost('atualizarAudiencia', Object.assign({ audiencia_id: a.audiencia_id }, novos));
+        carregarAudienciasPage(); carregarDashboard();
+      });
     }
   });
 
