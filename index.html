@@ -510,6 +510,22 @@
         </table>
       </section>
 
+      <section class="card" style="margin-bottom:16px">
+        <div class="hd"><h3>Perícias</h3><span class="mini" id="detPerCount">—</span></div>
+        <table class="tbl">
+          <thead><tr><th>Data</th><th>Local</th><th>Assistente Técnico</th></tr></thead>
+          <tbody id="detTblPericias"></tbody>
+        </table>
+      </section>
+
+      <section class="card" style="margin-bottom:16px">
+        <div class="hd"><h3>Sentenças / Acórdãos</h3><span class="mini" id="detSentCount">—</span></div>
+        <table class="tbl">
+          <thead><tr><th>Publicação</th><th>Resultado</th><th>Recurso</th></tr></thead>
+          <tbody id="detTblSentencas"></tbody>
+        </table>
+      </section>
+
       <section class="card">
         <div class="hd"><h3>Movimentações</h3><span class="mini" id="detMovCount">—</span></div>
         <div id="detListMov" style="display:flex;flex-direction:column;gap:12px;padding:16px 18px"></div>
@@ -1259,8 +1275,8 @@
     detView.style.display = 'block';
     links.forEach(x => x.classList.remove('active'));
 
-    const [processos, clientes, movs, prazos, audiencias, documentos] = await Promise.all([
-      apiGet('processos'), apiGet('clientes'), apiGet('movimentacoes'), apiGet('prazos'), apiGet('audiencias'), apiGet('documentos')
+    const [processos, clientes, movs, prazos, audiencias, documentos, pericias, sentencas] = await Promise.all([
+      apiGet('processos'), apiGet('clientes'), apiGet('movimentacoes'), apiGet('prazos'), apiGet('audiencias'), apiGet('documentos'), apiGet('pericias'), apiGet('sentencas')
     ]);
     const processo = processos.find(p => p.processo_id === processoId);
     if (!processo) { detView.innerHTML = '<p>Processo não encontrado.</p>'; return; }
@@ -1297,6 +1313,20 @@
       const dt = (d.criado_em||'').slice(0,10).split('-').reverse().join('/');
       return `<tr><td><a href="${d.url}" target="_blank" rel="noopener">${d.nome_arquivo}</a></td><td>${formatarTamanho(d.tamanho_bytes)}</td><td>${dt}</td></tr>`;
     }).join('') : '<tr><td colspan="3">Nenhum documento enviado</td></tr>';
+
+    const perDoProcesso = pericias.filter(pe => pe.processo_id === processoId);
+    document.getElementById('detPerCount').textContent = perDoProcesso.length + ' registrada(s)';
+    document.getElementById('detTblPericias').innerHTML = perDoProcesso.length ? perDoProcesso.map(pe => {
+      const d = String(pe.data_pericia||'').slice(0,10).split('-').reverse().join('/');
+      return `<tr><td>${d || '—'}</td><td>${pe.local||'—'}</td><td>${pe.assistente_tecnico||'—'}</td></tr>`;
+    }).join('') : '<tr><td colspan="3">Nenhuma perícia registrada</td></tr>';
+
+    const sentDoProcesso = sentencas.filter(s => s.processo_id === processoId)
+      .sort((a,b) => String(b.data_ciencia||'').localeCompare(String(a.data_ciencia||'')));
+    document.getElementById('detSentCount').textContent = sentDoProcesso.length + ' registrada(s)';
+    document.getElementById('detTblSentencas').innerHTML = sentDoProcesso.length ? sentDoProcesso.map(s => `
+      <tr><td>${s.publicacao||'—'}</td><td>${s.resultado||'—'}</td><td>${s.recurso||'—'}</td></tr>
+    `).join('') : '<tr><td colspan="3">Nenhuma sentença/acórdão registrado</td></tr>';
 
     const movsDoProcesso = movs.filter(m => m.processo_id === processoId)
       .sort((a,b) => String(b.data||'').localeCompare(String(a.data||'')));
