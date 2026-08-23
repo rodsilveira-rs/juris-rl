@@ -114,6 +114,8 @@
   .btn-secundario{background:transparent;color:var(--tx-muted);border:1px solid var(--line);border-radius:8px;padding:9px 16px;font:inherit;font-size:13px;cursor:pointer}
   .btn-acao{background:transparent;color:var(--tx-muted);border:1px solid var(--line);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;margin-right:6px}
   .btn-acao.perigo{color:var(--danger)}
+  .link-processo{color:var(--steel);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+  .link-processo:hover{color:var(--ink)}
 
   /* barra de upload estilo "aurora" — usa as cores do tema ativo */
   .upload-progress{display:none;margin-top:10px}
@@ -465,6 +467,55 @@
       </section>
     </main>
 
+    <!-- ===== DETALHE DO PROCESSO ===== -->
+    <main class="content" id="viewProcessoDetalhe" style="display:none">
+      <button class="btn-secundario" id="btnVoltarDetalhe" style="margin-bottom:14px">‹ Voltar para Processos</button>
+      <section class="card" style="padding:20px;margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+          <div>
+            <div style="font-family:var(--serif);font-size:20px;color:var(--ink)" id="detProcessoNumero">—</div>
+            <div style="font-size:13px;color:var(--tx-muted);margin-top:4px" id="detProcessoParte">—</div>
+          </div>
+          <button class="btn-acao" id="btnEditarDetalheProcesso">Editar</button>
+        </div>
+        <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:16px;font-size:12.5px;color:var(--tx-muted)">
+          <div><strong style="color:var(--tx)">Cliente:</strong> <span id="detProcessoCliente">—</span></div>
+          <div><strong style="color:var(--tx)">Tribunal:</strong> <span id="detProcessoTribunal">—</span></div>
+          <div><strong style="color:var(--tx)">Vara:</strong> <span id="detProcessoVara">—</span></div>
+          <div><strong style="color:var(--tx)">Status:</strong> <span id="detProcessoStatus">—</span></div>
+        </div>
+      </section>
+
+      <section class="card" style="margin-bottom:16px">
+        <div class="hd"><h3>Prazos</h3><span class="mini" id="detPrazosCount">—</span></div>
+        <table class="tbl">
+          <thead><tr><th>Vencimento</th><th>Tipo</th><th>Status</th></tr></thead>
+          <tbody id="detTblPrazos"></tbody>
+        </table>
+      </section>
+
+      <section class="card" style="margin-bottom:16px">
+        <div class="hd"><h3>Audiências</h3><span class="mini" id="detAudCount">—</span></div>
+        <table class="tbl">
+          <thead><tr><th>Data</th><th>Horário</th><th>Tipo</th><th>Vara</th></tr></thead>
+          <tbody id="detTblAudiencias"></tbody>
+        </table>
+      </section>
+
+      <section class="card" style="margin-bottom:16px">
+        <div class="hd"><h3>Documentos</h3><span class="mini" id="detDocCount">—</span></div>
+        <table class="tbl">
+          <thead><tr><th>Arquivo</th><th>Tamanho</th><th>Enviado em</th></tr></thead>
+          <tbody id="detTblDocumentos"></tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <div class="hd"><h3>Movimentações</h3><span class="mini" id="detMovCount">—</span></div>
+        <div id="detListMov" style="display:flex;flex-direction:column;gap:12px;padding:16px 18px"></div>
+      </section>
+    </main>
+
     <!-- ===== CLIENTES (lista completa) ===== -->
     <main class="content" id="viewClientes" style="display:none">
       <section class="card">
@@ -688,6 +739,7 @@
   const cliView = document.getElementById('viewClientes');
   const prazView = document.getElementById('viewPrazos');
   const docView = document.getElementById('viewDocumentos');
+  const detView = document.getElementById('viewProcessoDetalhe');
   let _paginaAtiva = 'Dashboard';
   links.forEach(a=>a.addEventListener('click',e=>{
     e.preventDefault();
@@ -697,7 +749,7 @@
     _paginaAtiva = mod;
     dash.style.display='none'; empty.style.display='none'; procView.style.display='none';
     audView.style.display='none'; periView.style.display='none'; cliView.style.display='none';
-    prazView.style.display='none'; docView.style.display='none'; ctx.style.display='none';
+    prazView.style.display='none'; docView.style.display='none'; detView.style.display='none'; ctx.style.display='none';
     if(mod==='Dashboard'){ dash.style.display='block'; ctx.style.display='flex'; }
     else if(mod==='Processos'){ procView.style.display='block'; if(!window._processosCarregados) carregarProcessosPage(); }
     else if(mod==='Audiências'){ audView.style.display='block'; if(!window._audienciasCarregadas) carregarAudienciasPage(); }
@@ -789,7 +841,7 @@
       const recentes = movs.slice(-6).reverse();
       tbody.innerHTML = recentes.length ? recentes.map(m => `
         <tr>
-          <td class="proc">${(m.processo_id || '').slice(-10)}</td>
+          <td class="proc"><span class="link-processo" data-id="${m.processo_id||''}">${(m.processo_id || '').slice(-10)}</span></td>
           <td>${clientesPorProcesso[m.processo_id] || '—'}</td>
           <td>${(m.texto || '').slice(0, 60)}${(m.texto||'').length > 60 ? '…' : ''}</td>
           <td><span class="st ${m.lida ? 'a' : 's'}">${m.lida ? 'Lida' : 'Nova'}</span></td>
@@ -840,7 +892,7 @@
     const tbody = document.getElementById('tblProcessosFull');
     tbody.innerHTML = lista.length ? lista.map(p => `
       <tr>
-        <td class="proc">${p.numero_processo || '—'}</td>
+        <td class="proc"><span class="link-processo" data-id="${p.processo_id}">${p.numero_processo || '—'}</span></td>
         <td>${p.clienteNome}</td>
         <td>${p.parte_contraria || '—'}</td>
         <td>${p.tribunal || '—'}</td>
@@ -885,7 +937,7 @@
         <tr>
           <td>${dataFmt}</td>
           <td>${a.horario || '—'}</td>
-          <td class="proc">${a.numero}</td>
+          <td class="proc"><span class="link-processo" data-id="${a.processo_id}">${a.numero}</span></td>
           <td>${a.clienteNome}</td>
           <td>${a.vara || '—'}</td>
           <td>${a.tipo || '—'}</td>
@@ -912,7 +964,7 @@
     tbody.innerHTML = lista.length ? lista.map(pe => `
       <tr>
         <td>${pe.data_pericia || '—'}</td>
-        <td class="proc">${pe.numero}</td>
+        <td class="proc"><span class="link-processo" data-id="${pe.processo_id}">${pe.numero}</span></td>
         <td>${pe.clienteNome}</td>
         <td>${pe.vara || '—'}</td>
         <td>${pe.local || '—'}</td>
@@ -971,7 +1023,7 @@
         <tr>
           <td>${dataFmt}</td>
           <td>${p.tipo || '—'}</td>
-          <td class="proc">${p.numero}</td>
+          <td class="proc"><span class="link-processo" data-id="${p.processo_id}">${p.numero}</span></td>
           <td>${p.clienteNome}</td>
           <td>${p.origem || '—'}</td>
           <td><span class="st a">Confirmado</span></td>
@@ -1050,7 +1102,7 @@
       return `
         <tr>
           <td><a href="${d.url}" target="_blank" rel="noopener">${d.nome_arquivo}</a></td>
-          <td class="proc">${d.numero}</td>
+          <td class="proc"><span class="link-processo" data-id="${d.processo_id}">${d.numero}</span></td>
           <td>${d.clienteNome}</td>
           <td>${formatarTamanho(d.tamanho_bytes)}</td>
           <td>${dataFmt || '—'}</td>
@@ -1194,6 +1246,98 @@
       t.numero.toLowerCase().includes(termo) || t.clienteNome.toLowerCase().includes(termo) || (t.tipo||'').toLowerCase().includes(termo)));
     else if (_paginaAtiva === 'Documentos') renderDocumentosTabela(_todosDocumentos.filter(d =>
       (d.nome_arquivo||'').toLowerCase().includes(termo) || d.numero.toLowerCase().includes(termo) || d.clienteNome.toLowerCase().includes(termo)));
+  });
+
+  // ===== Detalhe do processo (aberto clicando no número em qualquer tabela) =====
+  window._detalheProcessoAtual = null;
+
+  async function abrirDetalheProcesso(processoId) {
+    if (!processoId) return;
+    dash.style.display='none'; empty.style.display='none'; procView.style.display='none';
+    audView.style.display='none'; periView.style.display='none'; cliView.style.display='none';
+    prazView.style.display='none'; docView.style.display='none'; ctx.style.display='none';
+    detView.style.display = 'block';
+    links.forEach(x => x.classList.remove('active'));
+
+    const [processos, clientes, movs, prazos, audiencias, documentos] = await Promise.all([
+      apiGet('processos'), apiGet('clientes'), apiGet('movimentacoes'), apiGet('prazos'), apiGet('audiencias'), apiGet('documentos')
+    ]);
+    const processo = processos.find(p => p.processo_id === processoId);
+    if (!processo) { detView.innerHTML = '<p>Processo não encontrado.</p>'; return; }
+    window._detalheProcessoAtual = processo;
+    const cliente = clientes.find(c => c.cliente_id === processo.cliente_id);
+
+    document.getElementById('detProcessoNumero').textContent = processo.numero_processo || '—';
+    document.getElementById('detProcessoParte').textContent = 'Parte contrária: ' + (processo.parte_contraria || '—');
+    document.getElementById('detProcessoCliente').textContent = (cliente && cliente.nome) || '—';
+    document.getElementById('detProcessoTribunal').textContent = processo.tribunal || '—';
+    document.getElementById('detProcessoVara').textContent = processo.vara || '—';
+    document.getElementById('detProcessoStatus').textContent = processo.status || 'ativo';
+
+    const prazosDoProcesso = prazos.filter(p => p.processo_id === processoId && p.status === 'aberto')
+      .sort((a,b) => (a.data_vencimento||'').localeCompare(b.data_vencimento||''));
+    document.getElementById('detPrazosCount').textContent = prazosDoProcesso.length + ' confirmado(s)';
+    document.getElementById('detTblPrazos').innerHTML = prazosDoProcesso.length ? prazosDoProcesso.map(p => {
+      const d = (p.data_vencimento||'').slice(0,10).split('-').reverse().join('/');
+      return `<tr><td>${d}</td><td>${p.tipo||'—'}</td><td><span class="st a">Confirmado</span></td></tr>`;
+    }).join('') : '<tr><td colspan="3">Nenhum prazo confirmado</td></tr>';
+
+    const audDoProcesso = audiencias.filter(a => a.processo_id === processoId)
+      .sort((a,b) => (a.data||'').localeCompare(b.data||''));
+    document.getElementById('detAudCount').textContent = audDoProcesso.length + ' registrada(s)';
+    document.getElementById('detTblAudiencias').innerHTML = audDoProcesso.length ? audDoProcesso.map(a => {
+      const d = /^\d{4}-\d{2}-\d{2}/.test(a.data||'') ? a.data.slice(0,10).split('-').reverse().join('/') : (a.data||'—');
+      return `<tr><td>${d}</td><td>${a.horario||'—'}</td><td>${a.tipo||'—'}</td><td>${a.vara||'—'}</td></tr>`;
+    }).join('') : '<tr><td colspan="4">Nenhuma audiência registrada</td></tr>';
+
+    const docsDoProcesso = documentos.filter(d => d.processo_id === processoId)
+      .sort((a,b) => (b.criado_em||'').localeCompare(a.criado_em||''));
+    document.getElementById('detDocCount').textContent = docsDoProcesso.length + ' arquivo(s)';
+    document.getElementById('detTblDocumentos').innerHTML = docsDoProcesso.length ? docsDoProcesso.map(d => {
+      const dt = (d.criado_em||'').slice(0,10).split('-').reverse().join('/');
+      return `<tr><td><a href="${d.url}" target="_blank" rel="noopener">${d.nome_arquivo}</a></td><td>${formatarTamanho(d.tamanho_bytes)}</td><td>${dt}</td></tr>`;
+    }).join('') : '<tr><td colspan="3">Nenhum documento enviado</td></tr>';
+
+    const movsDoProcesso = movs.filter(m => m.processo_id === processoId)
+      .sort((a,b) => String(b.data||'').localeCompare(String(a.data||'')));
+    document.getElementById('detMovCount').textContent = movsDoProcesso.length + ' registrada(s)';
+    document.getElementById('detListMov').innerHTML = movsDoProcesso.length ? movsDoProcesso.map(m => {
+      const d = String(m.data||'').slice(0,10).split('-').reverse().join('/');
+      return `<div style="border-bottom:1px solid var(--line);padding-bottom:10px">
+        <div style="font-size:12px;color:var(--tx-muted);margin-bottom:4px">${d} · ${m.sistema||''}</div>
+        <div style="font-size:13px;line-height:1.5">${(m.texto||'').slice(0,300)}${(m.texto||'').length>300?'…':''}</div>
+      </div>`;
+    }).join('') : '<div style="color:var(--tx-muted);font-size:13px">Nenhuma movimentação registrada</div>';
+  }
+
+  document.getElementById('btnVoltarDetalhe').addEventListener('click', () => {
+    document.querySelector('.nav a[data-mod="Processos"]').click();
+  });
+
+  document.getElementById('btnEditarDetalheProcesso').addEventListener('click', () => {
+    const p = window._detalheProcessoAtual;
+    if (!p) return;
+    const listaBase = _todosProcessos.length ? _todosProcessos : [p];
+    abrirModal('Editar processo — ' + (p.numero_processo || ''), [
+      { key: 'parte_contraria', label: 'Parte contrária' },
+      { key: 'tribunal', label: 'Tribunal', type: 'datalist', opcoes: valoresUnicos(listaBase, 'tribunal') },
+      { key: 'sistema_judicial', label: 'Sistema judicial', type: 'datalist', opcoes: valoresUnicos(listaBase, 'sistema_judicial') },
+      { key: 'vara', label: 'Vara', type: 'datalist', opcoes: valoresUnicos(listaBase, 'vara') },
+      { key: 'classe_acao', label: 'Classe da ação', type: 'datalist', opcoes: valoresUnicos(listaBase, 'classe_acao') },
+      { key: 'status', label: 'Status', type: 'select', opcoes: [
+        { value: 'ativo', label: 'Ativo' }, { value: 'suspenso', label: 'Suspenso' },
+        { value: 'arquivado', label: 'Arquivado' }, { value: 'encerrado', label: 'Encerrado' }
+      ]}
+    ], p, async novos => {
+      await apiPost('atualizarProcesso', Object.assign({ processo_id: p.processo_id }, novos));
+      abrirDetalheProcesso(p.processo_id);
+    });
+  });
+
+  document.addEventListener('click', e => {
+    if (e.target.classList.contains('link-processo')) {
+      abrirDetalheProcesso(e.target.dataset.id);
+    }
   });
 </script>
 </body>
