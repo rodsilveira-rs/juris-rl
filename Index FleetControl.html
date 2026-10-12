@@ -25,11 +25,45 @@ button{font:inherit;cursor:pointer}input,select,textarea{font:inherit;color:inhe
 .logo.md .mark{width:52px;height:52px}.logo.md .logo-txt b{font-size:20px}.logo.md .logo-txt span{font-size:9px;letter-spacing:3.6px}
 /* ---------- login ---------- */
 .login{min-height:100vh;display:grid;grid-template-columns:1.2fr 1fr;background:#fff}
-.login .hero{background:radial-gradient(1200px 600px at 0% 0%,#1C2D4A 0,#0F1B2D 55%,#0B1322 100%);color:#fff;padding:56px;display:flex;flex-direction:column;justify-content:center;gap:34px;position:relative;overflow:hidden}
-.login .hero:after{content:'';position:absolute;right:-120px;bottom:-120px;width:420px;height:420px;border-radius:50%;border:60px solid rgba(201,162,74,.07)}
-.login .tag{letter-spacing:7px;font-size:12px;color:#C9D1DF}
-.feats{display:grid;grid-template-columns:1fr 1fr;gap:16px 26px;max-width:560px}
-.feat{display:flex;gap:12px;align-items:center;font-size:12.5px;letter-spacing:1.2px;font-weight:600;color:#E7ECF4}.feat .ic{color:var(--gold)}
+.login .hero{background:radial-gradient(1200px 600px at 0% 0%,#1C2D4A 0,#0F1B2D 55%,#0B1322 100%);color:#fff;padding:56px;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden}
+/* ---------- login: abertura animada da marca (loop 16s) ---------- */
+.login .hero:after{content:'';position:absolute;right:-120px;bottom:-120px;width:420px;height:420px;border-radius:50%;border:60px solid rgba(201,162,74,.07);animation:pbOrb 16s ease-in-out infinite alternate}
+.login .hero:before{content:'';position:absolute;inset:0;background:radial-gradient(600px 300px at 30% 40%,rgba(201,162,74,.08),transparent 70%);animation:pbHalo 16s ease-in-out infinite}
+.pb-streak{position:absolute;left:0;height:1px;width:38%;background:linear-gradient(90deg,transparent,rgba(230,198,119,.55),transparent);opacity:0;pointer-events:none}
+.pb-streak.s1{top:24%;animation:pbStreak 11s linear infinite}
+.pb-streak.s2{top:71%;width:28%;animation:pbStreak 15s linear 4s infinite}
+.pb-streak.s3{top:86%;width:20%;animation:pbStreak 19s linear 9s infinite}
+.pb-stage{position:relative;z-index:1;display:flex;flex-direction:column;gap:30px;max-width:600px}
+.pb-brand{display:flex;align-items:center;gap:22px}
+.pb-mark{width:112px;height:112px;flex:none;overflow:visible;animation:pbMark 16s ease-in-out infinite}
+.pb-mark .rd,.pb-mark .bb{stroke-dasharray:1;stroke-dashoffset:1}
+.pb-mark .rd{animation:pbRoad 16s ease-in-out infinite}
+.pb-mark .bb{animation:pbB 16s ease-in-out infinite}
+.pb-mark .ln{opacity:0;animation:pbLane 16s ease-in-out infinite}
+.pb-name{font-family:Montserrat,Inter,sans-serif;font-weight:800;font-size:40px;line-height:1;letter-spacing:1px;color:#fff;opacity:0;animation:pbName 16s cubic-bezier(.2,.7,.2,1) infinite}
+.pb-sub{font-size:13px;font-weight:700;letter-spacing:8px;color:var(--gold);margin-top:10px;opacity:0;animation:pbSub 16s ease-out infinite}
+.pb-rule{height:1px;width:220px;background:linear-gradient(90deg,var(--gold),transparent);transform-origin:left;transform:scaleX(0);animation:pbRule 16s ease-in-out infinite}
+.login .tag{letter-spacing:7px;font-size:12px;color:#C9D1DF;opacity:0;animation:pbTag 16s ease-out infinite}
+.feats{display:grid;grid-template-columns:1fr 1fr;gap:18px 30px;max-width:560px}
+.feat{display:flex;gap:12px;align-items:center;font-size:12.5px;letter-spacing:1.2px;font-weight:600;color:#E7ECF4;opacity:0}.feat .ic{color:var(--gold)}
+.feat:nth-child(1){animation:pbF1 16s ease-out infinite}.feat:nth-child(2){animation:pbF2 16s ease-out infinite}
+.feat:nth-child(3){animation:pbF3 16s ease-out infinite}.feat:nth-child(4){animation:pbF4 16s ease-out infinite}
+@keyframes pbRoad{0%,3%{stroke-dashoffset:1;opacity:1}20%,89%{stroke-dashoffset:0;opacity:1}97%,100%{stroke-dashoffset:0;opacity:0}}
+@keyframes pbB{0%,14%{stroke-dashoffset:1;opacity:1}34%,89%{stroke-dashoffset:0;opacity:1}97%,100%{stroke-dashoffset:0;opacity:0}}
+@keyframes pbLane{0%,18%{opacity:0}25%,89%{opacity:1}97%,100%{opacity:0}}
+@keyframes pbMark{0%,33%{filter:drop-shadow(0 0 0 rgba(230,198,119,0));transform:scale(1)}38%{filter:drop-shadow(0 0 14px rgba(230,198,119,.55));transform:scale(1.03)}46%,89%{filter:drop-shadow(0 0 5px rgba(230,198,119,.25));transform:scale(1)}97%,100%{filter:none;transform:scale(.96)}}
+@keyframes pbName{0%,36%{opacity:0;transform:translateY(14px);letter-spacing:6px}45%,89%{opacity:1;transform:none;letter-spacing:1px}96%,100%{opacity:0;transform:translateY(-6px);letter-spacing:1px}}
+@keyframes pbSub{0%,42%{opacity:0;transform:translateY(8px)}50%,89%{opacity:1;transform:none}96%,100%{opacity:0}}
+@keyframes pbRule{0%,46%{transform:scaleX(0)}55%,89%{transform:scaleX(1)}96%,100%{transform:scaleX(0)}}
+@keyframes pbTag{0%,52%{opacity:0;transform:translateY(8px)}59%,89%{opacity:1;transform:none}96%,100%{opacity:0}}
+@keyframes pbF1{0%,60%{opacity:0;transform:translateY(10px)}66%,90%{opacity:1;transform:none}96%,100%{opacity:0}}
+@keyframes pbF2{0%,64%{opacity:0;transform:translateY(10px)}70%,90%{opacity:1;transform:none}96%,100%{opacity:0}}
+@keyframes pbF3{0%,68%{opacity:0;transform:translateY(10px)}74%,90%{opacity:1;transform:none}96%,100%{opacity:0}}
+@keyframes pbF4{0%,72%{opacity:0;transform:translateY(10px)}78%,90%{opacity:1;transform:none}96%,100%{opacity:0}}
+@keyframes pbOrb{0%{transform:scale(1) rotate(0)}100%{transform:scale(1.12) rotate(18deg)}}
+@keyframes pbHalo{0%,30%{opacity:0}45%,85%{opacity:1}100%{opacity:0}}
+@keyframes pbStreak{0%{transform:translateX(-100%);opacity:0}10%{opacity:1}60%{opacity:.6}75%,100%{transform:translateX(300%);opacity:0}}
+@media (prefers-reduced-motion:reduce){.login .hero *,.login .hero:before,.login .hero:after{animation:none!important;opacity:1!important;transform:none!important;stroke-dashoffset:0!important}.pb-streak{display:none}}
 .login .form{display:flex;align-items:center;justify-content:center;padding:32px}
 .lbox{width:100%;max-width:380px}.lbox h2{margin:0 0 6px;font-size:26px}.lbox p{margin:0 0 24px;color:var(--mut)}
 .lbox .f{margin-bottom:14px}.lbox .btn{width:100%;justify-content:center;padding:14px}
@@ -557,12 +591,23 @@ async function boot() {
 }
 function logoutLocal(msg) { S.token = ''; S.user = null; S.data = null; S.flow = null; localStorage.removeItem('pb_token'); closeAllModals(); renderLogin(msg); }
 function sair() { logoutLocal(''); }
+function heroMark() {
+  return `<svg class="pb-mark" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="pbh" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F3DA92"/><stop offset=".5" stop-color="#C9A24A"/><stop offset="1" stop-color="#8A6520"/></linearGradient></defs>
+    <path class="rd" pathLength="1" d="M5 60 C16 48 22 30 27 5" stroke="url(#pbh)" stroke-width="9" fill="none" stroke-linecap="round"/>
+    <path class="ln" d="M5 60 C16 48 22 30 27 5" stroke="#0F1B2D" stroke-width="1.4" stroke-dasharray="3.5 3.5" fill="none"/>
+    <path class="bb" pathLength="1" d="M29 7 H43 a11.5 11.5 0 0 1 0 23 H32 M33 30 H46 a13 13 0 0 1 0 26 H22" stroke="url(#pbh)" stroke-width="7" fill="none" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
 function renderLogin(err) {
   if (err !== undefined) S.loginErr = err || '';
-  const feats = [['shield', 'VEÍCULOS<br>BEM CUIDADOS'], ['users', 'MOTORISTAS<br>VALORIZADOS'], ['trend', 'GESTÃO<br>INTELIGENTE'], ['car', 'MAIS<br>RESULTADOS']];
+  const feats = [['trend', 'GESTÃO INTELIGENTE<br>DA FROTA'], ['clipboard', 'MAIS CONTROLE<br>E ORGANIZAÇÃO'], ['shield', 'MAIS SEGURANÇA<br>E CONFIANÇA'], ['car', 'MAIS RESULTADO<br>PARA SUA OPERAÇÃO']];
   $('#app').innerHTML = `<div class="login" id="login">
-    <div class="hero">${logo('lg')}<div class="tag">MAIS MOBILIDADE PARA O SEU CAMINHO</div>
-      <div class="feats">${feats.map(f => `<div class="feat">${ic(f[0], 30)}<span>${f[1]}</span></div>`).join('')}</div></div>
+    <div class="hero"><span class="pb-streak s1"></span><span class="pb-streak s2"></span><span class="pb-streak s3"></span>
+      <div class="pb-stage">
+        <div class="pb-brand">${heroMark()}<div><div class="pb-name">PAULO BOMFIM</div><div class="pb-sub">LOCADORA DE VEÍCULOS</div></div></div>
+        <div class="pb-rule"></div>
+        <div class="tag">MOBILIDADE COM GESTÃO PROFISSIONAL</div>
+        <div class="feats">${feats.map(f => `<div class="feat">${ic(f[0], 30)}<span>${f[1]}</span></div>`).join('')}</div>
+      </div></div>
     <div class="form"><div class="lbox"><div class="lmob">${logo('md')}</div>
       <h2>Acesse sua conta</h2><p>Gestão de frota, jornadas e manutenções.</p>
       ${S.loginErr ? `<div class="lerr">${esc(S.loginErr)}</div>` : ''}
