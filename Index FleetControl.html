@@ -284,7 +284,7 @@ button{font:inherit;cursor:pointer}input,select,textarea{font:inherit;color:inhe
    ===================================================================== */
 const CONFIG = {
   API_URL: 'https://script.google.com/macros/s/AKfycbzBeznjYwE9bxK3G_NIm_-i9oSpzB9ypcv7dyTqOuaGPZ_Nw51XMOIbm0qHNlOyDrtG/exec',
-  APP_VERSION: '1.0.0',          // sempre igual ao version.json
+  APP_VERSION: '1.1.0',          // sempre igual ao version.json
   VERSION_URL: 'version.json',
   LOGO_URL: 'logo.png',          // opcional: símbolo PB recortado (fundo transparente)
   REFRESH_MS: 60000              // atualização automática dos dados (1 min)
@@ -561,7 +561,7 @@ function csv(name, cols, rows) {
 }
 
 /* ======================= VERSÃO / AUTO-ATUALIZAÇÃO ===================== */
-function isBusy() { return !!(S.flow || $('#modals .mback') || S.busyUp > 0); }
+function isBusy() { return !!(S.flow || $('#modals .mback') || S.busyUp > 0 || (isAdm() && S.view === 'configuracoes')); }
 async function checkVersion() {
   try {
     const r = await fetch(CONFIG.VERSION_URL + '?t=' + Date.now(), { cache: 'no-store' });
@@ -612,12 +612,13 @@ function renderLogin(err) {
       <h2>Acesse sua conta</h2><p>Gestão de frota, jornadas e manutenções.</p>
       ${S.loginErr ? `<div class="lerr">${esc(S.loginErr)}</div>` : ''}
       <form onsubmit="event.preventDefault();doLogin(this)">
-        <div class="f"><label>Usuário</label><input name="login" autocomplete="username" autocapitalize="none" placeholder="ex.: joao.silva" required></div>
+        <div class="f"><label>Usuário ou e-mail</label><input name="login" autocomplete="username" autocapitalize="none" placeholder="ex.: joao.silva" required></div>
         <div class="f"><label>Senha</label><input name="senha" type="password" autocomplete="current-password" required></div>
         <button class="btn pri" type="submit">Entrar ${ic('arrow', 16)}</button>
       </form>
       <p class="small muted" style="margin-top:22px">Esqueceu a senha? Fale com o Paulo para redefinir.</p></div></div></div>`;
 }
+
 async function doLogin(form) {
   const btn = form.querySelector('button'); btn.disabled = true; btn.textContent = 'Entrando…';
   try {
@@ -658,7 +659,7 @@ function render(keepScroll) {
    ====================================================================== */
 const NAV = [['dashboard', 'Dashboard', 'dashboard'], ['veiculos', 'Veículos', 'car'], ['motoristas', 'Motoristas', 'users'], ['jornadas', 'Jornadas', 'calendar'],
   ['manutencoes', 'Manutenções', 'wrench'], ['checklists', 'Checklists', 'clipboard'], ['financeiro', 'Financeiro', 'dollar'], ['documentos', 'Documentos', 'file'],
-  ['ocorrencias', 'Ocorrências', 'alert'], ['relatorios', 'Relatórios', 'chart'], ['alertas', 'Alertas', 'bell'], ['usuarios', 'Usuários', 'usercog'], ['configuracoes', 'Configurações', 'settings']];
+  ['ocorrencias', 'Ocorrências', 'alert'], ['relatorios', 'Relatórios', 'chart'], ['alertas', 'Alertas', 'bell'], ['comunicados', 'Comunicados', 'mail'], ['usuarios', 'Usuários', 'usercog'], ['configuracoes', 'Configurações', 'settings']];
 const VIEWS = {};
 function alertasAtivos() { return (D().alertas || []).filter(a => a.STATUS === 'Ativo'); }
 function renderAdmin() {
@@ -1083,10 +1084,13 @@ VIEWS.financeiro = () => {
     <td>${x.COMPROVANTE_ID && S.A[x.COMPROVANTE_ID] ? `<button class="btn sm" onclick="openAnexo('${x.COMPROVANTE_ID}')">${ic('eye', 14)}</button>` : ''}</td><td>${x.ORIGEM !== 'MANUTENCAO' ? `<button class="btn sm ghost" title="Cancelar" onclick="cancDesp('${x.ID}')">${ic('x', 14)}</button>` : ''}</td></tr>`).join('')}</table></div>` : empty('Sem despesas no período', '', 'dollar')}</div>`;
   } else if (tab === 'rec') {
     const l = rec.slice().sort((a, b) => String(a.DATA_VENC).localeCompare(String(b.DATA_VENC)));
-    body = `<div class="toolbar"><button class="btn" onclick="formReceita()">${ic('plus', 15)} Nova cobrança</button><span class="muted small">Lance aqui os aluguéis a receber de cada motorista.</span></div>
-    <div class="card">${l.length ? `<div class="tw"><table class="tbl"><tr><th>Vencimento</th><th>Veículo</th><th>Motorista</th><th>Descrição</th><th class="r">Valor</th><th>Status</th><th>Pago em</th><th></th></tr>
-    ${l.map(r => `<tr><td class="nowrap">${dBR(r.DATA_VENC)}</td><td class="nowrap">${esc(vName(r.VEICULO_ID))}</td><td>${esc(mName(r.MOTORISTA_ID))}</td><td>${esc(r.DESCRICAO)}</td><td class="r"><b>${brl(r.VALOR)}</b></td><td>${r.STATUS === 'Em aberto' && r.DATA_VENC < today() ? '<span class="pill r">Atrasada</span>' : pill(r.STATUS)}</td><td>${r.STATUS === 'Paga' ? dBR(r.DATA_PAGTO) + ' · ' + brl(r.VALOR_PAGO) : '—'}</td>
-    <td class="nowrap">${r.STATUS === 'Em aberto' ? `<button class="btn sm grn" onclick="formPagar('${r.ID}')">Baixar</button> <button class="btn sm ghost" onclick="cancRec('${r.ID}')">${ic('x', 14)}</button>` : ''}</td></tr>`).join('')}</table></div>` : empty('Nenhuma cobrança no período', '', 'dollar')}</div>`;
+    body = `<div class="toolbar"><button class="btn" onclick="formReceita()">${ic('plus', 15)} Nova cobrança</button><span class="muted small">Lembretes antes do vencimento e avisos de atraso saem automaticamente por e-mail (ajuste em Configurações).</span></div>
+    <div class="card">${l.length ? `<div class="tw"><table class="tbl"><tr><th>Vencimento</th><th>Veículo</th><th>Motorista</th><th>Descrição</th><th class="r">Valor</th><th class="r">Atualizado hoje</th><th>Status</th><th>Pago em</th><th>Último aviso</th><th></th></tr>
+    ${l.map(r => { const e = encargos(r), ab = r.STATUS === 'Em aberto'; return `<tr><td class="nowrap">${dBR(r.DATA_VENC)}</td><td class="nowrap">${esc(vName(r.VEICULO_ID))}</td><td>${esc(mName(r.MOTORISTA_ID))}</td><td>${esc(r.DESCRICAO)}</td><td class="r"><b>${brl(r.VALOR)}</b></td>
+    <td class="r nowrap" title="${esc(encTxt(e))}">${ab && e.dias ? `<b style="color:var(--r)">${brl(e.total)}</b><br><small class="muted">${e.dias} dia(s)</small>` : '—'}</td>
+    <td>${ab && e.dias ? '<span class="pill r">Atrasada</span>' : pill(r.STATUS)}</td><td>${r.STATUS === 'Paga' ? dBR(r.DATA_PAGTO) + ' · ' + brl(r.VALOR_PAGO) : '—'}</td>
+    <td class="nowrap small">${r.ULTIMA_COBRANCA ? dBR(r.ULTIMA_COBRANCA) + (toNum(r.QTD_COBRANCAS) ? `<br><span class="muted">${r.QTD_COBRANCAS} aviso(s)</span>` : '') : '<span class="muted">—</span>'}</td>
+    <td class="nowrap">${ab ? `<button class="btn sm" title="Enviar lembrete/cobrança por e-mail" onclick="cobrar('${r.ID}')">${ic('mail', 14)} ${e.dias ? 'Cobrar' : 'Lembrar'}</button> <button class="btn sm grn" onclick="formPagar('${r.ID}')">Baixar</button> <button class="btn sm ghost" onclick="cancRec('${r.ID}')">${ic('x', 14)}</button>` : ''}</td></tr>`; }).join('')}</table></div>` : empty('Nenhuma cobrança no período', '', 'dollar')}</div>`;
   } else {
     body = `<div class="card"><div class="tw"><table class="tbl"><tr><th>Veículo</th><th>Motorista</th><th class="r">Receita recebida</th><th class="r">Despesas</th><th class="r">Resultado</th><th class="r">KM rodados</th><th class="r">Manutenção / km</th></tr>
     ${d.veiculos.filter(v => v.STATUS !== 'Inativo').map(v => { const rv = sum(rec.filter(r => r.VEICULO_ID === v.ID && r.STATUS === 'Paga'), 'VALOR_PAGO'); const dv = sum(dl.filter(x => x.VEICULO_ID === v.ID), 'VALOR'); const mv = sum(dl.filter(x => x.VEICULO_ID === v.ID && (x.CATEGORIA === 'Manutenção' || x.CATEGORIA === 'Pneus')), 'VALOR'); const kv = sum(d.jornadas.filter(j => j.VEICULO_ID === v.ID && inMonth(j.DATA, ym) && j.KM_RODADOS !== ''), 'KM_RODADOS');
@@ -1116,10 +1120,29 @@ function formReceita() {
     onSave: async v => { await api('saveReceita', v); toast('Cobrança lançada'); await reload(); } });
 }
 function formPagar(id) {
-  const r = D().receitas.find(x => x.ID === id);
-  formModal({ title: 'Baixar pagamento', values: { VALOR_PAGO: r.VALOR, DATA_PAGTO: today(), FORMA: 'Pix' },
+  const r = D().receitas.find(x => x.ID === id), e = encargos(r);
+  formModal({ title: 'Baixar pagamento', values: { VALOR_PAGO: e.total, DATA_PAGTO: today(), FORMA: 'Pix' },
+    top: `<p class="muted" style="margin-top:0">${esc(r.DESCRICAO)} · vencimento ${dBR(r.DATA_VENC)} · valor original ${brl(r.VALOR)}${e.dias ? `<br><b style="color:var(--r)">${esc(encTxt(e))} → total ${brl(e.total)}</b><br>Se combinou isentar os encargos, troque o valor recebido.` : ''}</p>`,
     fields: [{ k: 'VALOR_PAGO', l: 'Valor recebido (R$)', t: 'number', step: '0.01', req: 1 }, { k: 'DATA_PAGTO', l: 'Data do pagamento', t: 'date', req: 1 }, { k: 'FORMA', l: 'Forma', t: 'select', o: ['Pix', 'Dinheiro', 'Transferência', 'Cartão', 'Boleto'] }],
     onSave: async v => { v.id = id; await api('pagarReceita', v); toast('Pagamento registrado'); await reload(); } });
+}
+function diasEntre(a, b) { const x = String(a).slice(0, 10).split('-').map(Number), y = String(b).slice(0, 10).split('-').map(Number); return Math.round((Date.UTC(y[0], y[1] - 1, y[2]) - Date.UTC(x[0], x[1] - 1, x[2])) / 864e5); }
+function encargos(r, ref) {
+  const c = D().config || {}, valor = toNum(r.VALOR), dias = Math.max(0, diasEntre(r.DATA_VENC, ref || today()));
+  const mp = Math.min(2, Math.max(0, toNum(c.MULTA_ATRASO_PCT))), jp = Math.min(1, Math.max(0, toNum(c.JUROS_MES_PCT)));
+  const multa = dias > 0 ? Math.round(valor * mp) / 100 : 0, juros = dias > 0 ? Math.round(valor * jp / 30 * dias) / 100 : 0;
+  return { dias, valor, mp, jp, multa, juros, total: Math.round((valor + multa + juros) * 100) / 100 };
+}
+function encTxt(e) { return e.dias ? `${e.dias} dia(s) de atraso · multa ${brl(e.multa)} (${String(e.mp).replace('.', ',')}%) · juros ${brl(e.juros)} (${String(e.jp).replace('.', ',')}% a.m.)` : 'Sem atraso'; }
+async function cobrar(id) {
+  const r = D().receitas.find(x => x.ID === id); if (!r) return;
+  const m = S.M[r.MOTORISTA_ID] || {}, e = encargos(r), atras = e.dias > 0;
+  const email = m.EMAIL || (D().usuarios.find(u => u.MOTORISTA_ID === r.MOTORISTA_ID) || {}).EMAIL;
+  if (!email) return toast((m.NOME || 'O motorista') + ' não tem e-mail cadastrado.', 'err');
+  const msg = atras
+    ? `Enviar <b>aviso de pagamento em atraso</b> para <b>${esc(m.NOME)}</b> (${esc(email)})?<br><br>Valor original: ${brl(e.valor)}<br>Multa (${String(e.mp).replace('.', ',')}%): ${brl(e.multa)}<br>Juros (${e.dias} dias): ${brl(e.juros)}<br><b>Total atualizado: ${brl(e.total)}</b><br><br><small class="muted">Por segurança, cada parcela só pode ser cobrada manualmente uma vez a cada 24 horas.</small>`
+    : `Enviar <b>lembrete de vencimento</b> (${dBR(r.DATA_VENC)}, ${brl(r.VALOR)}) para <b>${esc(m.NOME)}</b> (${esc(email)})?`;
+  if (await confirmBox(msg, atras ? 'Enviar cobrança' : 'Enviar lembrete')) act(() => api('enviarCobranca', { id }).then(x => toast(x.tipo.charAt(0).toUpperCase() + x.tipo.slice(1) + ' enviada para ' + x.para)));
 }
 async function cancRec(id) { if (await confirmBox('Cancelar esta cobrança?', 'Cancelar cobrança', true)) act(() => api('cancelarReceita', { id }), 'Cobrança cancelada'); }
 
@@ -1221,6 +1244,46 @@ VIEWS.alertas = () => {
    <div class="card"><div class="card-h"><h3>${ic('list', 18)} Histórico</h3></div><div class="card-b">${hist.length ? hist.map(alertItem).join('') : empty('Sem histórico', '', 'list')}</div></div>`;
 };
 
+/* ----------------------------- COMUNICADOS ---------------------------- */
+VIEWS.comunicados = () => {
+  const d = D(), ativos = d.motoristas.filter(m => m.STATUS === 'Ativo');
+  const mail = m => m.EMAIL || (d.usuarios.find(u => u.MOTORISTA_ID === m.ID) || {}).EMAIL || '';
+  if (!S.comSel) S.comSel = {};
+  if (!S.comDraft) S.comDraft = { assunto: '', mensagem: '' };
+  const hist = (d.comunicados || []).slice().reverse();
+  return pageH('Comunicados', 'Envie um e-mail para todos os motoristas ativos de uma só vez', d.cotaEmail !== '' && d.cotaEmail != null ? `<span class="pill x">${ic('mail', 12)} ${d.cotaEmail} e-mails disponíveis hoje</span>` : '') +
+   `<div class="card" style="max-width:900px;margin-bottom:16px"><div class="card-b" style="padding-top:18px"><div class="fg" id="comf">
+     <div class="f s2"><label>Assunto <i>*</i></label><input name="assunto" maxlength="150" placeholder="Ex.: Revisão geral dos carros no sábado" value="${esc(S.comDraft.assunto)}" oninput="S.comDraft.assunto=this.value"></div>
+     <div class="f s2"><label>Mensagem <i>*</i></label><textarea name="mensagem" rows="7" placeholder="Olá, {nome}!&#10;&#10;Escreva aqui o recado…" oninput="S.comDraft.mensagem=this.value">${esc(S.comDraft.mensagem)}</textarea><small class="hint">Use <b>{nome}</b> para o sistema trocar pelo primeiro nome de cada motorista. Cada um recebe um e-mail individual — ninguém vê o e-mail dos outros.</small></div>
+     <div class="f s2"><label>Destinatários</label>
+      <div style="display:flex;gap:8px;margin-bottom:8px"><button type="button" class="btn sm" onclick="comMarcar(true)">Marcar todos</button><button type="button" class="btn sm" onclick="comMarcar(false)">Desmarcar</button></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px">${ativos.length ? ativos.map(m => { const e = mail(m); const on = e && S.comSel[m.ID] !== false;
+        return `<label style="display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:9px 11px;${e ? 'cursor:pointer' : 'opacity:.55'}"><input type="checkbox" style="width:18px;height:18px;min-height:0;flex:none;accent-color:#B88D36" data-mid="${m.ID}" ${on ? 'checked' : ''} ${e ? '' : 'disabled'} onchange="S.comSel['${m.ID}']=this.checked"><span><b style="font-size:13px">${esc(m.NOME)}</b><br><small class="muted">${esc(e || 'sem e-mail cadastrado')}</small></span></label>`; }).join('') : '<span class="muted">Nenhum motorista ativo.</span>'}</div></div>
+    </div><div class="ferr" hidden id="comerr"></div>
+    <div style="margin-top:16px"><button class="btn pri" onclick="enviarComunicado(this)">${ic('mail', 16)} Enviar comunicado</button></div></div></div>
+   <div class="card"><div class="card-h"><h3>${ic('list', 18)} Enviados</h3></div><div class="card-b">${hist.length ? `<div class="tw"><table class="tbl"><tr><th>Data</th><th>Assunto</th><th class="r">Enviados</th><th>Por</th><th></th></tr>
+    ${hist.map(c => `<tr><td class="nowrap">${dBR(c.DATA_HORA)}</td><td><b>${esc(c.ASSUNTO)}</b></td><td class="r">${c.QTD}</td><td>${esc(c.USUARIO_NOME || '')}</td><td><button class="btn sm" onclick="verComunicado('${c.ID}')">${ic('eye', 14)}</button></td></tr>`).join('')}</table></div>` : empty('Nenhum comunicado enviado', '', 'mail')}</div></div>`;
+};
+function comMarcar(on) { $$('#comf input[data-mid]').forEach(i => { if (!i.disabled) { i.checked = on; S.comSel[i.dataset.mid] = on; } }); }
+function verComunicado(id) { const c = (D().comunicados || []).find(x => x.ID === id); if (!c) return; openModal({ title: esc(c.ASSUNTO), body: `<p class="muted" style="margin-top:0">${dBR(c.DATA_HORA)} · ${c.QTD} destinatário(s)</p><div style="white-space:pre-wrap;line-height:1.6;background:var(--bg);border-radius:10px;padding:14px">${esc(c.MENSAGEM)}</div><p class="small muted">Para: ${esc(c.DESTINATARIOS)}</p>` }); }
+async function enviarComunicado(btn) {
+  const f = $('#comf'), err = $('#comerr'); err.hidden = true;
+  const assunto = f.querySelector('[name=assunto]').value.trim(), mensagem = f.querySelector('[name=mensagem]').value.trim();
+  const ids = $$('#comf input[data-mid]').filter(i => i.checked && !i.disabled).map(i => i.dataset.mid);
+  try {
+    if (assunto.length < 3) throw new Error('Informe o assunto.');
+    if (mensagem.length < 5) throw new Error('Escreva a mensagem.');
+    if (!ids.length) throw new Error('Selecione pelo menos um motorista.');
+  } catch (e) { err.textContent = e.message; err.hidden = false; return; }
+  if (!(await confirmBox(`Enviar "<b>${esc(assunto)}</b>" para <b>${ids.length}</b> motorista(s)?`, 'Enviar agora'))) return;
+  btn.disabled = true; loading(true, 'Enviando e-mails…');
+  try {
+    const r = await api('enviarComunicado', { assunto, mensagem, ids, reqId: uid() });
+    toast(r.enviados + ' e-mail(s) enviado(s)'); if (r.falhas && r.falhas.length) toast('Falhou para: ' + r.falhas.join(', '), 'err');
+    S.comSel = {}; S.comDraft = { assunto: '', mensagem: '' }; await loadData(); render(true);
+  } catch (e) { err.textContent = e.message; err.hidden = false; } finally { loading(false); btn.disabled = false; }
+}
+
 /* ------------------------------- USUÁRIOS ----------------------------- */
 VIEWS.usuarios = () => {
   const d = D();
@@ -1252,6 +1315,15 @@ VIEWS.configuracoes = () => {
     <div class="f s2"><label>Nome da empresa (aparece nos e-mails)</label><input name="NOME_EMPRESA" value="${esc(c.NOME_EMPRESA)}"></div>
     <div class="f s2"><label>E-mail(s) do administrador para alertas</label><input name="EMAIL_ADMIN" value="${esc(c.EMAIL_ADMIN)}" placeholder="paulo@email.com"><small class="hint">Separe vários por vírgula.</small></div>
     <div class="f s2"><label>Link do sistema (GitHub Pages)</label><input name="APP_URL" value="${esc(c.APP_URL || location.origin + location.pathname)}"><small class="hint">Usado no botão "Abrir sistema" dos e-mails.</small></div>
+    <div class="sec-t">Cobrança e lembretes ao motorista</div>
+    <div class="f"><label>Multa por atraso (%)</label><input name="MULTA_ATRASO_PCT" type="number" step="0.1" min="0" max="2" value="${esc(c.MULTA_ATRASO_PCT)}"><small class="hint">Cobrada uma única vez. Máximo permitido no sistema: 2%.</small></div>
+    <div class="f"><label>Juros de mora (% ao mês)</label><input name="JUROS_MES_PCT" type="number" step="0.1" min="0" max="1" value="${esc(c.JUROS_MES_PCT)}"><small class="hint">Proporcional aos dias, sem juros sobre juros. Máximo: 1% ao mês.</small></div>
+    <div class="f"><label>Lembretes antes do vencimento (dias)</label><input name="LEMBRETE_DIAS" value="${esc(c.LEMBRETE_DIAS)}" placeholder="3,2,1,0"><small class="hint">Ex.: 3,2,1,0 = três, dois e um dia antes, e no dia.</small></div>
+    <div class="f"><label>Avisos de atraso (dias depois)</label><input name="COBRANCA_DIAS" value="${esc(c.COBRANCA_DIAS)}" placeholder="1,5,10,15,30"><small class="hint">Ex.: 1,5,10 = 1, 5 e 10 dias após o vencimento.</small></div>
+    <div class="f"><label>Envio automático ao motorista</label><select name="COBRANCA_AUTO"><option value="S" ${c.COBRANCA_AUTO !== 'N' ? 'selected' : ''}>Ligado</option><option value="N" ${c.COBRANCA_AUTO === 'N' ? 'selected' : ''}>Desligado (só pelo botão)</option></select></div>
+    <div class="f"><label>Chave Pix</label><input name="PIX_CHAVE" value="${esc(c.PIX_CHAVE)}" placeholder="CPF, CNPJ, e-mail ou telefone"></div>
+    <div class="f"><label>CPF/CNPJ da locadora</label><input name="EMPRESA_DOC" value="${esc(c.EMPRESA_DOC)}"><small class="hint">Aparece nas cobranças (exigência do Código de Defesa do Consumidor).</small></div>
+    <div class="f"><label>WhatsApp para contato</label><input name="WHATSAPP_CONTATO" value="${esc(c.WHATSAPP_CONTATO)}" placeholder="27999999999"><small class="hint">Vira um botão "Falar no WhatsApp" nos e-mails.</small></div>
     <div class="sec-t">Regras</div>
     <div class="f"><label>Antecedência do alerta de revisão (km)</label><input name="ANTECEDENCIA_KM" type="number" value="${esc(c.ANTECEDENCIA_KM)}"></div>
     <div class="f"><label>Aviso de vencimento de CNH/documentos (dias)</label><input name="ALERTA_DOC_DIAS" type="number" value="${esc(c.ALERTA_DOC_DIAS)}"></div>
